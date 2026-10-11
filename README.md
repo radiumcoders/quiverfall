@@ -1,0 +1,124 @@
+# QUIVERFALL
+
+A Hollow-Knight-flavoured 2D platformer in **Rust + Bevy 0.20**. You are Wren, a masked
+archer descending through a ruined underground kingdom. There's no wall-jump and no double
+jump: **your arrows are your climbing gear.** Clear five levels of hazards and enemies,
+beat the Warden, and reach the final exit.
+
+All art was generated with GPT-5.6 Sol through the Cursor agent CLI (see *Assets* below).
+Sound is synthesised at startup.
+
+```sh
+cargo run --release
+```
+
+The `assets/` folder must sit next to the executable, or set `BEVY_ASSET_ROOT` to point at it.
+`cargo run` handles this for you.
+
+## Controls
+
+| | Keyboard + mouse | Gamepad |
+|---|---|---|
+| Move | A / D (or arrows) | left stick / d-pad |
+| Jump (hold = higher) | Space / Z | A |
+| Dash (also in mid-air) | Shift / K / C | RB / B |
+| Draw & fire | hold Left Mouse or J / X, release to fire | hold RT / X |
+| Aim | mouse, or WASD/arrows while holding J | right stick (or left while drawing) |
+| Swipe (down + swipe in air = pogo) | Right Mouse / F / L | Y |
+| Switch arrow | 1–6, Q / E / Tab, mouse wheel | LB / d-pad up, LT |
+| Drop through wooden ledges | S + Space | down + A |
+| Pause | Esc / P | Start |
+| Restart level | R | — |
+
+Drawing the bow in mid-air slows your fall (the "archer hang"). A full draw fires
+a flat, fast Steel arrow that deals 2 damage and pierces.
+
+## The arrows
+
+| # | Arrow | Found in | Does |
+|---|---|---|---|
+| 1 | **Steel** | start | Damage. Sticks in **wood** as a peg you can stand on (3 at a time). |
+| 2 | **Lift** | Lift Shafts | Floor hit: a platform rises up to 7 tiles, carrying you. Wall hit: a ledge sprouts and climbs. |
+| 3 | **Tether** | Rootdeep | Hit an **anchor ring** or **wood**: zip to it and hang. Jump to let go, or fire the next tether. |
+| 4 | **Ember** | Rootdeep | Burns **thorns** (fire spreads), lights **braziers**, sets enemies ablaze. |
+| 5 | **Frost** | Frozen Cistern | Freezes **water** into ice and enemies into blocks you can stand on (or shatter). |
+| 6 | **Blink** | Frozen Cistern | Teleports you to where it lands. Flies through **grates**. Hit an enemy to swap places. |
+
+Special arrows cost one of three **charges** (the orbs). Charges refill on their own, and faster
+when you hit enemies with Steel or the swipe. A shot that does nothing refunds its charge.
+
+## Levels
+
+1. **The Hollow Gate**: tutorial. Movement, Steel pegs on a wooden wall, targets and gates.
+2. **Lift Shafts**: vertical climbs with Lift arrows, moths, crumbling ledges.
+3. **Rootdeep**: Tether ring-swinging over spikes, Ember vs. thorn walls and brazier gates.
+4. **Frozen Cistern**: Frost bridges, frozen-shieldbearer stepping stones, Blink through grates.
+5. **The Warden's Ascent**: everything together, then the Warden boss guarding the exit.
+
+Lanterns are checkpoints: touching one heals you and sets your respawn. Spikes, thorns and black
+water cost one mask and throw you back to safe ground. On the title screen, press 1–5 to jump
+to a level.
+
+## Project layout
+
+```
+src/
+  main.rs      app wiring, camera, debug hooks
+  game.rs      states, level loading, tile visuals, deaths/checkpoints
+  level.rs     tile grid, level file parser, collision queries
+  physics.rs   AABB vs tiles, one-way tiles, moving one-way platforms
+  player.rs    movement, bow, melee, damage, player visuals
+  arrows.rs    arrow flight + the six arrow powers
+  enemies.rs   crawler, hopper, moth, spitter, shieldbearer, the Warden
+  props.rs     lanterns, shrines, targets, braziers, anchors, exit, lifts, movers
+  fx.rs        particles, lights, screen shake, ambient motes
+  camera.rs    follow camera, parallax, vignette
+  hud.rs       HUD, banners, hints, title/pause/level-done/victory screens
+  audio.rs     synthesised sound effects + ambient drone
+  raster.rs    tiny SDF rasterizer for procedural sprites (glows, rims, moss)
+  config.rs    tuning constants
+levels/        ASCII level files (embedded at compile time)
+assets/art/    processed game art      assets/fonts/  Cinzel + Cormorant Garamond (OFL)
+art/raw/       raw generated images    tools/         asset generation + processing
+```
+
+### Level format
+
+`levels/*.txt` holds a header (`name:`, `subtitle:`, `biome:`, `hint:` lines and a legend), then
+`grid:` followed by the map, with the top row first. Each character is one 32 px tile:
+
+`#` stone · `W` wood · `-` one-way ledge · `^`/`v` spikes · `~` water · `T` thorns · `|` grate ·
+`%` crumbling · `Z` boss door · `P` start · `E` exit · `L` lantern · `o` anchor ring ·
+`c` crawler · `h` hopper · `m` moth · `s` spitter · `k` shieldbearer · `B` the Warden
+
+Legend lines map any other character: `a = target 1`, `A = gate 1`, `f = brazier 2`,
+`1 = shrine lift`, `M = mover dx dy speed width`, `0 = hint 0` (shows the first `hint:` line).
+A gate opens once every target or brazier with its id has been hit or lit.
+
+## Assets
+
+Everything in `assets/art/` was generated by **GPT-5.6 Sol** through the Cursor agent CLI, then
+cleaned up by a small Rust tool:
+
+```sh
+python3 tools/gen_assets.py            # generate missing raw images into art/raw/
+python3 tools/gen_assets.py moth bow   # regenerate specific ones
+cargo run -p assetproc --release       # key out the magenta, slice sheets -> assets/art/
+```
+
+Prompts live in `tools/assets.json`, which shares one style line across every asset so they
+match. Sprites are drawn on flat magenta. `assetproc` keys and despills the background, splits
+sprite sheets into frames by connected components (falling back to the grid), lines up animation
+frames on a shared baseline, and resizes. Set `QF_MODEL` or `QF_JOBS` to change the model or the
+number of parallel generations.
+
+## Debug / play-testing
+
+| Env var | Effect |
+|---|---|
+| `QF_LEVEL=3` | skip the title, start on level 3 with that level's arrows |
+| `QF_ALL_ARROWS=1` | unlock all six arrows |
+| `QF_TELEPORT=x,y` | spawn at tile (x, y) |
+| `QF_SCRIPT="1.5-1.8:R;2.0-2.3:F,a=0.3/1"` | scripted input (L R U D J S F M, `a=dx/dy` aim, `sel=N`) |
+| `QF_TRACE=1` | log the player's position and velocity 10× per second |
+| `QF_SHOT=out.png:4` | save a screenshot after 4 s and quit |

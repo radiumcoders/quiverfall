@@ -11,7 +11,7 @@ and no double jump — **your arrows are your climbing gear**.
 |---|---|---|
 | Tile | 32 px | levels are ASCII grids (`src/levels/`) |
 | Run | 270 px/s | instant-ish accel, low air control loss |
-| Jump | ~3 tiles high, ~5 tiles long | variable height, coyote time 0.1 s, jump buffer 0.12 s |
+| Jump | ~3.8 tiles high, ~5.5 tiles long | variable height, coyote time 0.1 s, jump buffer 0.12 s |
 | Dash | ~3 tiles, 1 per airtime | refreshes on ground / pegs / lifts |
 | Bow | hold to draw, release to fire | full draw = fast + flat + 2 dmg; tap = weak lob |
 | Air draw | drawing in mid-air slows your fall once per airtime | the "archer hang" |
@@ -25,7 +25,7 @@ and no double jump — **your arrows are your climbing gear**.
 |---|---|---|---|
 | 1 | **Steel** (free) | Damage. Sticks into **wood** and becomes a **peg** you can stand on (max 3, oldest pops). | climb wooden walls by shooting a staircase of pegs |
 | 2 | **Lift** (elevator) | Plants a glowing disc where it lands. Floor hit → a platform rises from the floor up to 7 tiles (stops at ceilings), holds, then sinks. Wall hit → a ledge sprouts and rides up the wall. | vertical shafts, carrying you past spikes |
-| 3 | **Tether** | Hits an **anchor ring** or **wood** → you zip to it and keep the momentum. | crossing spike pits, swinging over gaps |
+| 3 | **Tether** | Hits an **anchor ring** or **wood** → you zip to it and hang there until you jump or fire the next one. | crossing spike pits ring to ring |
 | 4 | **Ember** | Burns **thorn walls** (fire spreads through connected thorns), lights **braziers** that open gates, sets enemies on fire. | burn paths open, brazier gate puzzles |
 | 5 | **Frost** | Freezes the surface of **water** into walkable ice; freezes enemies into **ice blocks** you can stand on. | water crossings, enemy stepping stones |
 | 6 | **Blink** | Teleports you to where it lands. Hit an enemy → swap places. Flies through **grates** that block you. | getting past grates, escaping, reaching sealed rooms |
@@ -76,14 +76,14 @@ Checkpoints are **lanterns** — touching one heals you and sets the respawn.
 
 ## Art & assets
 
-Everything renders procedurally (ink silhouettes, glowing eyes, fog, parallax caverns)
-so the game is fully playable with zero image files. Every visual has an **optional
-asset slot**: drop a PNG with the right name into `public/assets/` and the game uses it
-instead. `ASSETS.md` lists every slot with size and a ready-to-paste image prompt for
-generating them (e.g. GPT image gen in Cursor).
+All art is generated with GPT-5.6 Sol via the Cursor agent CLI (`tools/gen_assets.py`,
+prompts in `tools/assets.json`) on flat magenta backgrounds. `tools/assetproc` keys,
+slices and normalises it into `assets/art/`. Characters come from one sprite sheet per
+character, because a single generation stays consistent while separate generations drift.
+The bow, bowstring, glows, rim lighting and moss are procedural.
 
 ## Tech
 
-Vite + TypeScript + Canvas 2D, no engine. Fixed 120 Hz physics, AABB-vs-tile collision,
-WebAudio-synthesised SFX. `?level=N` jumps to a level, `?debug` shows hitboxes and
-exposes `window.__game`.
+Rust + Bevy 0.20 (2D, UI, audio). Custom kinematic AABB-vs-tile physics, ASCII levels
+embedded at compile time, HDR bloom, synthesised WAV sound effects. Debug env vars
+(`QF_LEVEL`, `QF_SCRIPT`, `QF_SHOT`, ...) are listed in the README.
