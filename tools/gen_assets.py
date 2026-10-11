@@ -53,7 +53,7 @@ def generate(manifest, a):
                 msg = (r.stdout or r.stderr).strip().splitlines()[-1:] or [""]
             except subprocess.TimeoutExpired:
                 msg = ["timeout"]
-            pngs = sorted(Path(tmp).glob("*.png"), key=lambda p: p.stat().st_mtime)
+            pngs = sorted((p for p in Path(tmp).rglob("*") if p.suffix.lower() in (".png", ".jpg", ".jpeg", ".webp")), key=lambda p: p.stat().st_mtime)
             if pngs:
                 shutil.move(str(pngs[-1]), out)
                 print(f"[ok]   {a['name']:16} {msg[0][:80]}", flush=True)
