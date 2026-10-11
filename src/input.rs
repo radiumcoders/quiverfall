@@ -219,6 +219,7 @@ impl Script {
         c.move_x = mx;
         c.move_y = my;
         c.jump_pressed = jump && !self.prev_jump;
+        c.confirm_pressed = c.jump_pressed;
         c.jump_held = jump;
         c.fire_held = fire;
         c.fire_released = !fire && self.prev_fire;
