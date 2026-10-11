@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use std::collections::VecDeque;
 use std::f32::consts::FRAC_PI_2;
 
-use crate::arrows::{ArrowKind, spawn_arrow};
+use crate::arrows::{ArrowKind, shot_params, spawn_arrow};
 use crate::art::Art;
 use crate::audio::{PlaySfx, Sfx};
 use crate::config::*;
@@ -348,17 +348,13 @@ pub fn player_update(
         if p.drawing && (!c.fire_held || c.fire_released) {
             p.drawing = false;
             let kind = ArrowKind::ALL[p.selected];
-            let power = (p.draw / DRAW_TIME).clamp(0.0, 1.0);
-            // utility arrows always fly fast and flat - only steel rewards a full draw
-            let power = if kind == ArrowKind::Steel { power.max(0.15) } else { 1.0 };
+            let (speed, grav, power) = shot_params(kind, p.draw);
             if kind != ArrowKind::Steel && p.charges < 1.0 {
                 sfx.write(PlaySfx(Sfx::Fizzle, 0.5));
             } else {
                 if kind != ArrowKind::Steel {
                     p.charges -= 1.0;
                 }
-                let speed = ARROW_SPEED_MIN + (ARROW_SPEED_MAX - ARROW_SPEED_MIN) * power;
-                let grav = ARROW_GRAV_MAX + (ARROW_GRAV_MIN - ARROW_GRAV_MAX) * power;
                 let start = shoulder + p.aim * 14.0;
                 spawn_arrow(&mut commands, &art, kind, start, p.aim * speed, grav, power);
                 if power >= 1.0 {

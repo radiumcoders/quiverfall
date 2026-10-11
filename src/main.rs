@@ -103,6 +103,7 @@ fn main() {
             game::refresh_tiles,
             (
                 player::player_visuals,
+                arrows::aim_preview,
                 enemies::enemy_visuals,
                 camera::camera_follow,
                 camera::parallax,

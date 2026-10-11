@@ -92,6 +92,19 @@ pub struct Arrow {
 #[derive(Component)]
 pub struct Peg;
 
+/// Arrows fly dead straight this long before gravity takes hold.
+pub const ARROW_FLAT_TIME: f32 = 0.03;
+
+/// Launch speed, gravity and power of a shot drawn for `draw` seconds.
+pub fn shot_params(kind: ArrowKind, draw: f32) -> (f32, f32, f32) {
+    let power = (draw / DRAW_TIME).clamp(0.0, 1.0);
+    // utility arrows always fly fast and flat - only steel rewards a full draw
+    let power = if kind == ArrowKind::Steel { power.max(0.15) } else { 1.0 };
+    let speed = ARROW_SPEED_MIN + (ARROW_SPEED_MAX - ARROW_SPEED_MIN) * power;
+    let grav = ARROW_GRAV_MAX + (ARROW_GRAV_MIN - ARROW_GRAV_MAX) * power;
+    (speed, grav, power)
+}
+
 pub fn spawn_arrow(commands: &mut Commands, art: &Art, kind: ArrowKind, pos: Vec2, vel: Vec2, grav: f32, power: f32) {
     let mut e = commands.spawn((
         LevelEntity,
@@ -154,7 +167,7 @@ pub fn arrows_update(
             fx.write(Burst::trail(tf.translation.truncate(), a.kind.color()));
         }
         // arrows fly flat for a moment before they start to drop
-        if a.life > 0.12 {
+        if a.life > ARROW_FLAT_TIME {
             a.vel.y -= a.grav * dt;
         }
         let mut pos = tf.translation.truncate();
@@ -561,4 +574,127 @@ fn free_spot(level: &Level, target: Vec2, half: Vec2, normal: Vec2) -> Option<Ve
         Vec2::new(-12.0, 12.0),
     ];
     candidates.iter().map(|o| base + *o).find(|p| !level.box_solid(*p, half))
+}
+
+// ---------------- aim preview ----------------
+
+const AIM_DOTS: usize = 30;
+const AIM_SPACING: f32 = 18.0;
+/// how far ahead (seconds of flight) the preview looks
+const AIM_LOOKAHEAD: f32 = 1.0;
+
+#[derive(Component)]
+pub struct AimDot(usize);
+
+#[derive(Component)]
+pub struct AimMarker;
+
+/// Where a shot would go: the flight path (same integration as `arrows_update`) and,
+/// if it hits a wall, floor or water within the lookahead, the impact point.
+pub fn predict_shot(level: &Level, start: Vec2, vel: Vec2, grav: f32) -> (Vec<Vec2>, Option<Vec2>) {
+    let h = 1.0 / 120.0;
+    let (mut pos, mut vel, mut life) = (start, vel, 0.0);
+    let mut path = vec![pos];
+    while life < AIM_LOOKAHEAD {
+        life += h;
+        if life > ARROW_FLAT_TIME {
+            vel.y -= grav * h;
+        }
+        pos += vel * h;
+        let tip = pos + vel.normalize_or_zero() * 14.0;
+        let t = Level::tile_at(tip);
+        if level.get(t.x, t.y) == Tile::Water || level.arrow_solid(t.x, t.y) {
+            path.push(tip);
+            return (path, Some(tip));
+        }
+        path.push(pos);
+    }
+    (path, None)
+}
+
+/// Dotted arc showing the arrow's projectile motion while the bow is drawn.
+pub fn aim_preview(
+    mut commands: Commands,
+    time: Res<Time<Real>>,
+    art: Res<Art>,
+    level: Option<Res<Level>>,
+    players: Query<(&Player, &Transform)>,
+    mut dots: Query<(&AimDot, &mut Transform, &mut Sprite, &mut Visibility), (Without<Player>, Without<AimMarker>)>,
+    mut marker: Query<(&mut Transform, &mut Sprite, &mut Visibility), (With<AimMarker>, Without<Player>, Without<AimDot>)>,
+) {
+    let Some(level) = level else { return };
+    if dots.is_empty() {
+        for i in 0..AIM_DOTS {
+            commands.spawn((LevelEntity, AimDot(i), Sprite { image: art.dot.clone(), ..default() }, Transform::from_xyz(0.0, 0.0, 6.5), Visibility::Hidden));
+        }
+        commands.spawn((
+            LevelEntity,
+            AimMarker,
+            Sprite { image: art.fx[crate::fx::FxKind::Ring as usize].clone(), ..default() },
+            Transform::from_xyz(0.0, 0.0, 6.6),
+            Visibility::Hidden,
+        ));
+        return;
+    }
+    let shot = players.single().ok().filter(|(p, _)| p.drawing && p.hp > 0 && p.draw > 0.06);
+    let Some((p, tf)) = shot else {
+        for (_, _, _, mut v) in &mut dots {
+            *v = Visibility::Hidden;
+        }
+        if let Ok((_, _, mut v)) = marker.single_mut() {
+            *v = Visibility::Hidden;
+        }
+        return;
+    };
+    let kind = ArrowKind::ALL[p.selected];
+    let (speed, grav, power) = shot_params(kind, p.draw);
+    let start = tf.translation.truncate() + Vec2::new(0.0, 6.0) + p.aim * 14.0;
+    let (path, impact) = predict_shot(&level, start, p.aim * speed, grav);
+    let t = time.elapsed_secs();
+    let col = if kind == ArrowKind::Steel { Color::srgb(1.3, 1.4, 1.5) } else { kind.color() };
+    // fade in with the draw, brighter once the shot is at full power
+    let draw_k = (p.draw / 0.2).min(1.0);
+    let base_a = draw_k * if power >= 1.0 { 0.95 } else { 0.7 };
+
+    // walk the path, dropping a dot every AIM_SPACING px; the dots march outward
+    let mut along: Vec<(Vec2, f32)> = Vec::with_capacity(AIM_DOTS);
+    let total: f32 = path.windows(2).map(|w| w[0].distance(w[1])).sum::<f32>().max(1.0);
+    let mut next = 22.0 + (t * 70.0) % AIM_SPACING;
+    let mut acc = 0.0;
+    for w in path.windows(2) {
+        let seg = w[0].distance(w[1]);
+        while next <= acc + seg && along.len() < AIM_DOTS {
+            let k = (next - acc) / seg.max(1e-3);
+            along.push((w[0].lerp(w[1], k), next / total));
+            next += AIM_SPACING;
+        }
+        acc += seg;
+    }
+    for (d, mut dt, mut s, mut v) in &mut dots {
+        match along.get(d.0) {
+            Some(&(pos, f)) => {
+                *v = Visibility::Inherited;
+                dt.translation.x = pos.x;
+                dt.translation.y = pos.y;
+                let fade = (1.0 - f).powf(0.6);
+                s.custom_size = Some(Vec2::splat(7.5 - 3.5 * f));
+                s.color = col.with_alpha(base_a * fade);
+            }
+            None => *v = Visibility::Hidden,
+        }
+    }
+    if let Ok((mut mt, mut ms, mut mv)) = marker.single_mut() {
+        match impact {
+            Some(pos) => {
+                *mv = Visibility::Inherited;
+                mt.translation.x = pos.x;
+                mt.translation.y = pos.y;
+                mt.rotation = Quat::from_rotation_z(t * 1.5);
+                let pulse = 0.5 + 0.5 * (t * 6.0).sin();
+                ms.custom_size = Some(Vec2::splat(26.0 + 5.0 * pulse));
+                ms.color = col.with_alpha(draw_k * (0.7 + 0.3 * pulse));
+            }
+            None => *mv = Visibility::Hidden,
+        }
+    }
 }

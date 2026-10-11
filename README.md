@@ -30,8 +30,9 @@ The `assets/` folder must sit next to the executable, or set `BEVY_ASSET_ROOT` t
 | Pause | Esc / P | Start |
 | Restart level | R | — |
 
-Drawing the bow in mid-air slows your fall (the "archer hang"). A full draw fires
-a flat, fast Steel arrow that deals 2 damage and pierces.
+Drawing the bow in mid-air slows your fall (the "archer hang"). Arrows fly under gravity: a tap
+lobs a short arc, a full draw fires a fast Steel arrow on a long, shallow arc that deals 2 damage
+and pierces. While you draw, a dotted line traces the arrow's path and a ring marks where it lands.
 
 ## The arrows
 

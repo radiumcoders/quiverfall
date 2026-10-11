@@ -23,10 +23,10 @@ pub const PLAYER_HALF: (f32, f32) = (10.0, 20.0);
 
 // bow
 pub const DRAW_TIME: f32 = 0.38;
-pub const ARROW_SPEED_MIN: f32 = 520.0;
-pub const ARROW_SPEED_MAX: f32 = 1350.0;
-pub const ARROW_GRAV_MIN: f32 = 160.0;
-pub const ARROW_GRAV_MAX: f32 = 1100.0;
+pub const ARROW_SPEED_MIN: f32 = 480.0;
+pub const ARROW_SPEED_MAX: f32 = 1050.0;
+pub const ARROW_GRAV_MIN: f32 = 750.0;
+pub const ARROW_GRAV_MAX: f32 = 1300.0;
 pub const AIR_HANG_TIME: f32 = 0.7;
 pub const AIR_HANG_FALL: f32 = 70.0;
 pub const MAX_PEGS: usize = 3;
