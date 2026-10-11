@@ -1,0 +1,21 @@
+[package]
+name = "quiverfall"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { version = "0.20", default-features = false, features = ["2d", "ui", "audio", "wav"] }
+rand = "0.9"
+
+[profile.dev]
+opt-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+codegen-units = 1
+lto = "thin"
+
+[workspace]
+members = [".", "tools/assetproc"]
