@@ -275,6 +275,18 @@
       "kind": "layer",
       "size": "landscape 16:9",
       "prompt": "A foreground parallax frame layer for a title screen: near-black jagged cave rock outcrops with hanging roots, thin vines and stalactites hugging the LEFT edge, the RIGHT edge and the BOTTOM edge of the image, very dark slate with a faint cold teal rim light. The whole center and top-center of the image is completely empty."
+    },
+    {
+      "name": "boss_frame",
+      "kind": "sprite",
+      "size": "landscape 16:9",
+      "prompt": "A single ornate horizontal boss health bar frame for a game HUD, front view, perfectly straight and symmetrical, about 12 times wider than tall: a thin dark wrought-iron border with small bone-white curved horns and thorny filigree at the LEFT and RIGHT ends. The long inner slot of the frame is a perfectly straight empty rectangle that is filled with the same flat magenta as the background (the bar itself is NOT drawn). No mask, no emblem, nothing in the slot."
+    },
+    {
+      "name": "boss_emblem",
+      "kind": "sprite",
+      "size": "square",
+      "prompt": "A single round medallion emblem for a boss health bar: the Warden's cracked bone-white beetle mask with two burning amber eyes and long curved horns, set on a dark iron disc with a thin pale rim, front view, centered."
     }
   ],
   "fx_style": "Hand-painted 2D game visual effect in the style of Hollow Knight: luminous, crisp shape, soft glow falloff, painterly brush texture.",

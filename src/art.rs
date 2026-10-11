@@ -32,6 +32,8 @@ pub struct Art {
     pub ui_flourish: Handle<Image>,
     pub ui_pointer: Handle<Image>,
     pub chapter_thumbs: Vec<Handle<Image>>,
+    pub boss_frame: Handle<Image>,
+    pub boss_emblem: Handle<Image>,
     pub font_title: Handle<Font>,
     pub font_body: Handle<Font>,
     // procedural
@@ -203,6 +205,8 @@ pub fn load_art(mut commands: Commands, server: Res<AssetServer>, mut images: Re
         ui_flourish: one("ui_flourish"),
         ui_pointer: one("ui_pointer"),
         chapter_thumbs: crate::title::chapter_thumbs(&server),
+        boss_frame: one("boss_frame"),
+        boss_emblem: one("boss_emblem"),
         font_title: server.load("fonts/Cinzel.ttf"),
         font_body: server.load("fonts/Cormorant.ttf"),
         glow,

@@ -175,6 +175,7 @@ pub fn enemies_update(
             sfx.write(PlaySfx(Sfx::EnemyDie, 0.7));
             shake.add(if e.kind == EnemyKind::Warden { 1.0 } else { 0.2 });
             if e.kind == EnemyKind::Warden {
+                bar.frac = 0.0;
                 level.boss_active = false;
                 level.gate_open[8] = true;
                 sfx.write(PlaySfx(Sfx::Gate, 0.8));

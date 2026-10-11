@@ -43,6 +43,8 @@ fn opts(name: &str) -> Opts {
         "fx_rays" | "title_fg" => o(1600, 1600, false, false),
         "ui_flourish" => o(720, 160, false, false),
         "ui_pointer" => o(160, 160, false, false),
+        "boss_frame" => o(1200, 200, false, false),
+        "boss_emblem" => o(160, 160, false, false),
         n if n.starts_with("fx_") => o(384, 384, false, false),
         _ => o(512, 512, false, false),
     }

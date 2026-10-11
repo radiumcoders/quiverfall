@@ -4,7 +4,6 @@ use bevy::prelude::*;
 
 use crate::arrows::ArrowKind;
 use crate::art::{self, Art};
-use crate::enemies::BossBar;
 use crate::game::{AppState, LoadLevel, Paused, Progress};
 use crate::input::Controls;
 use crate::level::{LEVEL_SOURCES, parse_level};
@@ -100,10 +99,6 @@ pub struct BannerFlourish;
 #[derive(Component)]
 pub struct HintNode;
 #[derive(Component)]
-pub struct BossBarRoot;
-#[derive(Component)]
-pub struct BossBarFill;
-#[derive(Component)]
 pub struct PauseOverlay;
 #[derive(Component)]
 pub struct ArrowName;
@@ -168,32 +163,7 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
                         r.spawn((ArrowName, Node { margin: UiRect::left(px(8)), ..default() }, text(&art.font_title, "", 18.0, INK)));
                     });
             });
-            // boss bar
-            root.spawn((
-                BossBarRoot,
-                Node {
-                    position_type: PositionType::Absolute,
-                    top: px(26),
-                    left: percent(30),
-                    width: percent(40),
-                    flex_direction: FlexDirection::Column,
-                    align_items: AlignItems::Center,
-                    row_gap: px(6),
-                    display: Display::None,
-                    ..default()
-                },
-            ))
-            .with_children(|c| {
-                c.spawn(text(&art.font_title, "THE WARDEN", 20.0, Color::srgb(0.95, 0.75, 0.5)));
-                c.spawn((
-                    Node { width: percent(100), height: px(10), border: UiRect::all(px(1)), ..default() },
-                    BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
-                    BorderColor::all(Color::srgba(0.95, 0.8, 0.6, 0.6)),
-                ))
-                .with_children(|b| {
-                    b.spawn((BossBarFill, Node { width: percent(100), height: percent(100), ..default() }, BackgroundColor(Color::srgb(0.85, 0.35, 0.2))));
-                });
-            });
+            crate::bossbar::spawn_boss_bar(root, &art);
             // banner
             root.spawn(Node {
                 position_type: PositionType::Absolute,
@@ -257,7 +227,6 @@ pub fn update_hud(
     progress: Res<Progress>,
     mut banner: ResMut<Banner>,
     hint: Res<HintText>,
-    boss: Res<BossBar>,
     paused: Res<Paused>,
     mut masks: Query<(&MaskIcon, &mut ImageNode), (Without<OrbIcon>, Without<ArrowSlot>)>,
     mut orbs: Query<(&OrbIcon, &mut ImageNode), (Without<MaskIcon>, Without<ArrowSlot>)>,
@@ -268,9 +237,7 @@ pub fn update_hud(
         Query<&mut Text, With<HintNode>>,
         Query<(&mut Text, &mut TextColor), With<ArrowName>>,
     )>,
-    mut boss_root: Query<&mut Node, (With<BossBarRoot>, Without<ArrowSlot>, Without<BossBarFill>, Without<PauseOverlay>)>,
-    mut boss_fill: Query<&mut Node, (With<BossBarFill>, Without<ArrowSlot>, Without<BossBarRoot>, Without<PauseOverlay>)>,
-    mut pause: Query<&mut Node, (With<PauseOverlay>, Without<ArrowSlot>, Without<BossBarRoot>, Without<BossBarFill>)>,
+    mut pause: Query<&mut Node, (With<PauseOverlay>, Without<ArrowSlot>)>,
     mut sel: Local<(Option<usize>, f32)>,
 ) {
     let Ok(p) = players.single() else { return };
@@ -318,12 +285,6 @@ pub fn update_hud(
         let n = progress.unlocked.iter().filter(|u| **u).count();
         t.0 = if n > 1 { k.name().to_string() } else { String::new() };
         col.0 = INK.with_alpha((2.0 - sel.1).clamp(0.0, 1.0));
-    }
-    if let Ok(mut n) = boss_root.single_mut() {
-        n.display = if boss.active { Display::Flex } else { Display::None };
-    }
-    if let Ok(mut n) = boss_fill.single_mut() {
-        n.width = percent(boss.frac.max(0.0) * 100.0);
     }
     if let Ok(mut n) = pause.single_mut() {
         n.display = if paused.0 { Display::Flex } else { Display::None };

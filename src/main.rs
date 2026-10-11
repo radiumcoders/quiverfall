@@ -5,6 +5,7 @@
 mod arrows;
 mod art;
 mod audio;
+mod bossbar;
 mod camera;
 mod config;
 mod enemies;
@@ -116,7 +117,7 @@ fn main() {
                 camera::fit_vignette,
             )
                 .chain(),
-            (hud::update_hud, hud::banner_flourish).chain().run_if(in_state(AppState::Playing)),
+            (hud::update_hud, hud::banner_flourish, bossbar::update_boss_bar).chain().run_if(in_state(AppState::Playing)),
             hud::update_fade,
             audio::play_sfx,
         )

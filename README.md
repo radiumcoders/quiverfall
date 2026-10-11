@@ -75,6 +75,7 @@ src/
   camera.rs    follow camera, parallax, vignette
   hud.rs       HUD, banners, hints, pause/level-done/victory screens, screen fades
   title.rs     title screen: parallax key art, light shafts, embers, menu, chapters, controls
+  bossbar.rs   the Warden's health bar: ornate frame, chip-damage trail, hit flash
   audio.rs     synthesised sound effects + ambient drone
   raster.rs    tiny SDF rasterizer for procedural sprites (glows, rims, moss)
   config.rs    tuning constants
