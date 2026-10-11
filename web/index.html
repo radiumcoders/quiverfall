@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Quiverfall</title>
+  <meta name="description" content="A Hollow-Knight-flavoured archer platformer in Rust + Bevy. Your arrows are your climbing gear.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500&family=Cormorant+Garamond:ital@1&display=swap" rel="stylesheet">
+  <style>
+    :root { --ink: #ece7da; --dim: rgba(220, 222, 214, .6); --bg: #05080b; }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); overflow: hidden; }
+    #quiverfall { display: block; width: 100vw; height: 100vh; outline: none; }
+    #veil {
+      position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 14px; padding: 16px; text-align: center; color: var(--ink);
+      background: radial-gradient(ellipse at 50% 30%, #12202a 0%, var(--bg) 70%);
+      transition: opacity .8s ease; z-index: 2;
+    }
+    #veil.gone { opacity: 0; pointer-events: none; }
+    h1 { font: 500 clamp(40px, 9vw, 96px)/1 Cinzel, serif; letter-spacing: .04em; margin: 0; }
+    .sub { font: italic 22px "Cormorant Garamond", serif; color: var(--dim); margin: 0; }
+    #status { font: 18px "Cormorant Garamond", serif; color: var(--dim); min-height: 1.4em; }
+    #status.error { color: #f0a58a; }
+    button {
+      font: 500 20px Cinzel, serif; color: var(--ink); background: transparent; cursor: pointer;
+      border: 1px solid rgba(236, 231, 218, .45); border-radius: 4px; padding: 10px 28px; letter-spacing: .06em;
+    }
+    button:hover, button:focus-visible { background: rgba(236, 231, 218, .08); outline: none; }
+    button[hidden] { display: none; }
+    .bar { width: min(320px, 70vw); height: 2px; background: rgba(255,255,255,.08); overflow: hidden; }
+    .bar i { display: block; height: 100%; width: 30%; background: #9fd6d2; animation: slide 1.4s ease-in-out infinite; }
+    .bar.done { visibility: hidden; }
+    @keyframes slide { from { transform: translateX(-100%); } to { transform: translateX(340%); } }
+    .hint { font: 15px "Cormorant Garamond", serif; color: var(--dim); max-width: 560px; }
+  </style>
+</head>
+<body>
+  <canvas id="quiverfall" tabindex="0"></canvas>
+  <div id="veil">
+    <h1>QUIVERFALL</h1>
+    <p class="sub">an archer's descent</p>
+    <div class="bar" id="bar"><i></i></div>
+    <div id="status">Loading the deep…</div>
+    <button id="play" hidden>Descend</button>
+    <p class="hint">Keyboard + mouse or a gamepad. A/D move · Space jump · Shift dash · hold the mouse to draw, release to fire.</p>
+  </div>
+  <script>
+    // Browsers keep audio muted until a user gesture: remember every AudioContext the game
+    // creates and resume them all on the first click / key press.
+    (() => {
+      const ctxs = [];
+      const Orig = window.AudioContext || window.webkitAudioContext;
+      if (!Orig) return;
+      const Patched = function (...args) { const c = new Orig(...args); ctxs.push(c); return c; };
+      Patched.prototype = Orig.prototype;
+      window.AudioContext = window.webkitAudioContext = Patched;
+      const resume = () => ctxs.forEach(c => c.state !== "running" && c.resume());
+      ["pointerdown", "keydown", "touchstart"].forEach(e => document.addEventListener(e, resume, true));
+    })();
+  </script>
+  <script type="module">
+    import init from "./quiverfall.js";
+    const veil = document.getElementById("veil");
+    const status = document.getElementById("status");
+    const play = document.getElementById("play");
+    const bar = document.getElementById("bar");
+    const canvas = document.getElementById("quiverfall");
+
+    const supported = !!document.createElement("canvas").getContext("webgl2");
+    if (!supported) {
+      status.textContent = "This browser has no WebGL2, which Quiverfall needs.";
+      status.className = "error";
+      bar.classList.add("done");
+    } else {
+      // download the game while the title shows, then wait for a click so audio can start
+      const wasm = fetch("./quiverfall_bg.wasm");
+      status.textContent = "Loading the deep…";
+      wasm.then(() => {
+        bar.classList.add("done");
+        status.textContent = "";
+        play.hidden = false;
+        play.focus();
+      }).catch(() => { status.textContent = "Couldn't download the game."; status.className = "error"; });
+      play.addEventListener("click", async () => {
+        play.hidden = true;
+        status.textContent = "Lighting the lanterns…";
+        try {
+          await init({ module_or_path: wasm });
+        } catch (e) {
+          // winit hands control to the browser's event loop by throwing; that's not a failure
+          if (!String(e).includes("Using exceptions for control flow")) {
+            console.error(e);
+            status.textContent = "Something went wrong starting the game.";
+            status.className = "error";
+            return;
+          }
+        }
+      });
+      // reveal the game once Bevy has sized the canvas
+      const reveal = setInterval(() => {
+        if (canvas.width > 300 && play.hidden && !status.classList.contains("error")) {
+          setTimeout(() => { veil.classList.add("gone"); canvas.focus(); }, 1500);
+          clearInterval(reveal);
+        }
+      }, 200);
+    }
+  </script>
+</body>
+</html>

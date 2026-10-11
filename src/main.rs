@@ -20,6 +20,7 @@ mod props;
 mod raster;
 mod title;
 
+use bevy::asset::AssetMetaCheck;
 use bevy::camera::ScalingMode;
 use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::post_process::bloom::Bloom;
@@ -44,10 +45,16 @@ fn main() {
                     title: "Quiverfall".into(),
                     name: Some(std::env::var("QF_APP_ID").unwrap_or_else(|_| "quiverfall".into())),
                     resolution: WindowResolution::new(1600, 900),
+                    // web: draw into the page's canvas and let it fill the browser window
+                    canvas: Some("#quiverfall".into()),
+                    fit_canvas_to_parent: true,
+                    prevent_default_event_handling: true,
                     ..default()
                 }),
                 ..default()
             })
+            // no .meta files are shipped; skip the extra request per asset on the web
+            .set(AssetPlugin { meta_check: AssetMetaCheck::Never, ..default() })
             .set(ImagePlugin::default_linear()),
     )
     .init_state::<AppState>()

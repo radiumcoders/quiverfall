@@ -7,6 +7,11 @@ edition = "2024"
 bevy = { version = "0.20", default-features = false, features = ["2d", "ui", "audio", "wav", "tonemapping_luts", "zstd_rust"] }
 rand = "0.9"
 
+# the web build (see web/build.sh): WebGL2 rendering, browser RNG
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+bevy = { version = "0.20", default-features = false, features = ["webgl2", "web"] }
+getrandom = { version = "0.3", features = ["wasm_js"] }
+
 [profile.dev]
 opt-level = 1
 
@@ -16,6 +21,13 @@ opt-level = 3
 [profile.release]
 codegen-units = 1
 lto = "thin"
+
+# smaller, still fast wasm for the browser build
+[profile.web]
+inherits = "release"
+opt-level = "s"
+lto = "fat"
+strip = true
 
 [workspace]
 members = [".", "tools/assetproc"]

@@ -15,6 +15,19 @@ cargo run --release
 The `assets/` folder must sit next to the executable, or set `BEVY_ASSET_ROOT` to point at it.
 `cargo run` handles this for you.
 
+### Play in the browser
+
+**https://quiverfall.vercel.app** (WebGL2; best in Chrome/Edge/Firefox on desktop).
+
+The web build is plain static files in `dist/`:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo install wasm-bindgen-cli --version 0.2.129   # must match Cargo.lock
+./web/build.sh                                     # -> dist/ (runs wasm-opt if installed)
+cd dist && npx vercel deploy --prod                # or serve dist/ with any static host
+```
+
 ## Controls
 
 | | Keyboard + mouse | Gamepad |
