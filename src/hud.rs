@@ -4,11 +4,57 @@ use bevy::prelude::*;
 
 use crate::arrows::ArrowKind;
 use crate::art::{self, Art};
-use crate::audio::{PlaySfx, Sfx};
 use crate::enemies::BossBar;
 use crate::game::{AppState, LoadLevel, Paused, Progress};
 use crate::input::Controls;
 use crate::level::{LEVEL_SOURCES, parse_level};
+
+/// Full-screen black overlay used for fades between screens and on level (re)loads.
+#[derive(Resource)]
+pub struct ScreenFade {
+    pub alpha: f32,
+    pub target: f32,
+}
+
+impl Default for ScreenFade {
+    fn default() -> Self {
+        Self { alpha: 1.0, target: 0.0 }
+    }
+}
+
+#[derive(Component)]
+pub struct FadeOverlay;
+
+pub fn spawn_fade(mut commands: Commands) {
+    commands.spawn((
+        FadeOverlay,
+        Node { position_type: PositionType::Absolute, width: percent(100), height: percent(100), ..default() },
+        BackgroundColor(Color::BLACK),
+        GlobalZIndex(100),
+        Pickable::IGNORE,
+    ));
+}
+
+pub fn update_fade(
+    time: Res<Time<Real>>,
+    mut fade: ResMut<ScreenFade>,
+    mut loads: MessageReader<LoadLevel>,
+    mut q: Query<&mut BackgroundColor, With<FadeOverlay>>,
+) {
+    for l in loads.read() {
+        fade.alpha = fade.alpha.max(match l {
+            LoadLevel::Start(_) => 1.0,
+            LoadLevel::Respawn => 0.8,
+        });
+        fade.target = 0.0;
+    }
+    let dt = time.delta_secs().min(1.0 / 20.0);
+    let speed = if fade.target > fade.alpha { 2.4 } else { 1.5 };
+    fade.alpha += (fade.target - fade.alpha).clamp(-speed * dt, speed * dt);
+    if let Ok(mut bg) = q.single_mut() {
+        bg.0 = Color::srgba(0.0, 0.0, 0.0, fade.alpha.clamp(0.0, 1.0).powf(1.3));
+    }
+}
 use crate::player::Player;
 
 #[derive(Resource, Default)]
@@ -22,6 +68,9 @@ pub struct Banner {
 impl Banner {
     pub fn new(title: &str, sub: &str) -> Self {
         Self { title: title.into(), sub: sub.into(), t: 0.0, dur: 4.0 }
+    }
+    pub fn alpha(&self) -> f32 {
+        if self.t < 0.6 { self.t / 0.6 } else { ((self.dur - self.t) / 1.0).clamp(0.0, 1.0) }
     }
     pub fn unlock(&mut self, k: ArrowKind) {
         *self = Self {
@@ -46,6 +95,8 @@ pub struct ArrowSlot(usize);
 pub struct BannerTitle;
 #[derive(Component)]
 pub struct BannerSub;
+#[derive(Component)]
+pub struct BannerFlourish;
 #[derive(Component)]
 pub struct HintNode;
 #[derive(Component)]
@@ -155,6 +206,11 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
             })
             .with_children(|c| {
                 c.spawn((BannerTitle, text(&art.font_title, "", 54.0, INK), TextLayout::justify(Justify::Center)));
+                c.spawn((
+                    BannerFlourish,
+                    ImageNode::new(art.ui_flourish.clone()).with_color(Color::NONE),
+                    Node { width: px(380), aspect_ratio: Some(720.0 / 118.0), margin: UiRect::vertical(px(-10)), ..default() },
+                ));
                 c.spawn((BannerSub, text(&art.font_body, "", 20.0, DIM), TextLayout::justify(Justify::Center)));
             });
             // hint
@@ -240,7 +296,7 @@ pub fn update_hud(
     }
     // banner fade
     banner.t += time.delta_secs();
-    let a = if banner.t < 0.6 { banner.t / 0.6 } else { ((banner.dur - banner.t) / 1.0).clamp(0.0, 1.0) };
+    let a = banner.alpha();
     if let Ok((mut t, mut c)) = texts.p0().single_mut() {
         t.0 = banner.title.clone();
         c.0 = INK.with_alpha(a);
@@ -274,6 +330,13 @@ pub fn update_hud(
     }
 }
 
+pub fn banner_flourish(banner: Res<Banner>, mut q: Query<&mut ImageNode, With<BannerFlourish>>) {
+    if let Ok(mut img) = q.single_mut() {
+        let a = if banner.title.is_empty() { 0.0 } else { 0.8 * banner.alpha() };
+        img.color = Color::srgba(0.9, 0.92, 0.88, a);
+    }
+}
+
 pub fn pause_input(
     c: Res<Controls>,
     keys: Res<ButtonInput<KeyCode>>,
@@ -300,72 +363,6 @@ pub fn pause_input(
 }
 
 // ---------------- screens ----------------
-
-pub fn spawn_title(mut commands: Commands, art: Res<Art>, progress: Res<Progress>) {
-    commands
-        .spawn((
-            DespawnOnExit(AppState::Title),
-            Node {
-                position_type: PositionType::Absolute,
-                width: percent(100),
-                height: percent(100),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                justify_content: JustifyContent::End,
-                padding: UiRect::bottom(percent(6)),
-                row_gap: px(12),
-                ..default()
-            },
-            ImageNode::new(art.title.clone()).with_mode(bevy::ui::widget::NodeImageMode::Stretch),
-        ))
-        .with_children(|c| {
-            c.spawn((
-                Node { position_type: PositionType::Absolute, top: percent(9), ..default() },
-                text(&art.font_title, "QUIVERFALL", 96.0, Color::srgb(0.95, 0.93, 0.86)),
-            ));
-            c.spawn((
-                Node { position_type: PositionType::Absolute, top: percent(27), ..default() },
-                text(&art.font_body, "an archer's descent", 22.0, DIM),
-            ));
-            c.spawn(text(&art.font_title, "Press Enter / Space / (A) to begin", 26.0, INK));
-            let mut levels = String::from("Level select:  ");
-            for (i, src) in LEVEL_SOURCES.iter().enumerate() {
-                levels.push_str(&format!("{} {}    ", i + 1, parse_level(src).name));
-            }
-            c.spawn(text(&art.font_body, levels, 15.0, DIM));
-            c.spawn((text(&art.font_body, CONTROLS, 14.0, DIM), TextLayout::justify(Justify::Center)));
-            if progress.deaths > 0 {
-                c.spawn(text(&art.font_body, format!("deaths so far: {}", progress.deaths), 14.0, DIM));
-            }
-        });
-}
-
-pub fn title_input(
-    c: Res<Controls>,
-    keys: Res<ButtonInput<KeyCode>>,
-    mut progress: ResMut<Progress>,
-    mut next: ResMut<NextState<AppState>>,
-    mut loads: MessageWriter<LoadLevel>,
-    mut sfx: MessageWriter<PlaySfx>,
-) {
-    let digits = [KeyCode::Digit1, KeyCode::Digit2, KeyCode::Digit3, KeyCode::Digit4, KeyCode::Digit5];
-    let mut start = None;
-    if c.confirm_pressed {
-        start = Some(0);
-    }
-    for (i, k) in digits.iter().enumerate() {
-        if keys.just_pressed(*k) && i < LEVEL_SOURCES.len() {
-            start = Some(i);
-        }
-    }
-    if let Some(i) = start {
-        *progress = Progress::default();
-        unlock_for_level(&mut progress, i);
-        loads.write(LoadLevel::Start(i));
-        next.set(AppState::Playing);
-        sfx.write(PlaySfx(Sfx::Pickup, 0.6));
-    }
-}
 
 /// Arrows you'd have collected before reaching level `i`.
 pub fn unlock_for_level(progress: &mut Progress, i: usize) {
@@ -394,6 +391,10 @@ pub fn spawn_card(commands: &mut Commands, art: &Art, state: AppState, title: &s
         ))
         .with_children(|c| {
             c.spawn(text(&art.font_title, title, 60.0, INK));
+            c.spawn((
+                ImageNode::new(art.ui_flourish.clone()).with_color(Color::srgba(0.9, 0.92, 0.88, 0.8)),
+                Node { width: px(440), aspect_ratio: Some(720.0 / 118.0), margin: UiRect::vertical(px(-8)), ..default() },
+            ));
             for l in lines {
                 c.spawn(text(&art.font_body, l.clone(), 20.0, DIM));
             }

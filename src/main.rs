@@ -17,6 +17,7 @@ mod physics;
 mod player;
 mod props;
 mod raster;
+mod title;
 
 use bevy::camera::ScalingMode;
 use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
@@ -58,14 +59,17 @@ fn main() {
     .init_resource::<camera::CamState>()
     .init_resource::<hud::Banner>()
     .init_resource::<hud::HintText>()
+    .init_resource::<hud::ScreenFade>()
+    .init_resource::<title::TitleMenu>()
     .init_resource::<enemies::BossBar>()
     .insert_resource(start_progress())
     .add_message::<audio::PlaySfx>()
     .add_message::<fx::Burst>()
+    .add_message::<fx::Flash>()
     .add_message::<game::LoadLevel>()
-    .add_systems(Startup, (setup_camera, art::load_art, audio::setup_audio))
+    .add_systems(Startup, (setup_camera, art::load_art, audio::setup_audio, hud::spawn_fade))
     .add_systems(Update, game::wait_for_assets.run_if(in_state(AppState::Loading)))
-    .add_systems(OnEnter(AppState::Title), (hud::spawn_title, game::cleanup_level))
+    .add_systems(OnEnter(AppState::Title), (game::cleanup_level, title::spawn_title).chain())
     .add_systems(OnEnter(AppState::Playing), hud::spawn_hud)
     .add_systems(OnEnter(AppState::LevelDone), hud::spawn_level_done)
     .add_systems(OnEnter(AppState::Victory), hud::spawn_victory)
@@ -74,7 +78,7 @@ fn main() {
         (
             input::gather_input,
             (
-                hud::title_input.run_if(in_state(AppState::Title)),
+                (title::menu_input, title::menu_visuals, title::animate_scene).chain().run_if(in_state(AppState::Title)),
                 hud::level_done_input.run_if(in_state(AppState::LevelDone)),
                 hud::victory_input.run_if(in_state(AppState::Victory)),
                 hud::pause_input.run_if(in_state(AppState::Playing)),
@@ -102,7 +106,9 @@ fn main() {
                 camera::camera_follow,
                 camera::parallax,
                 fx::spawn_bursts,
+                fx::spawn_flashes,
                 fx::update_particles,
+                fx::update_flashes,
                 fx::ambient_motes,
                 fx::attach_lights,
                 fx::remove_lights,
@@ -110,7 +116,8 @@ fn main() {
                 camera::fit_vignette,
             )
                 .chain(),
-            hud::update_hud.run_if(in_state(AppState::Playing)),
+            (hud::update_hud, hud::banner_flourish).chain().run_if(in_state(AppState::Playing)),
+            hud::update_fade,
             audio::play_sfx,
         )
             .chain(),

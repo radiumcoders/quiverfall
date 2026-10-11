@@ -56,8 +56,8 @@ when you hit enemies with Steel or the swipe. A shot that does nothing refunds i
 5. **The Warden's Ascent**: everything together, then the Warden boss guarding the exit.
 
 Lanterns are checkpoints: touching one heals you and sets your respawn. Spikes, thorns and black
-water cost one mask and throw you back to safe ground. On the title screen, press 1–5 to jump
-to a level.
+water cost one mask and throw you back to safe ground. Pick any level from **Chapters** on the
+title screen, or press 1–5 there to jump straight in.
 
 ## Project layout
 
@@ -71,9 +71,10 @@ src/
   arrows.rs    arrow flight + the six arrow powers
   enemies.rs   crawler, hopper, moth, spitter, shieldbearer, the Warden
   props.rs     lanterns, shrines, targets, braziers, anchors, exit, lifts, movers
-  fx.rs        particles, lights, screen shake, ambient motes
+  fx.rs        particles, painted effect flashes (slash, impact, flame...), lights, shake, motes
   camera.rs    follow camera, parallax, vignette
-  hud.rs       HUD, banners, hints, title/pause/level-done/victory screens
+  hud.rs       HUD, banners, hints, pause/level-done/victory screens, screen fades
+  title.rs     title screen: parallax key art, light shafts, embers, menu, chapters, controls
   audio.rs     synthesised sound effects + ambient drone
   raster.rs    tiny SDF rasterizer for procedural sprites (glows, rims, moss)
   config.rs    tuning constants
@@ -107,7 +108,9 @@ cargo run -p assetproc --release       # key out the magenta, slice sheets -> as
 ```
 
 Prompts live in `tools/assets.json`, which shares one style line across every asset so they
-match. Sprites are drawn on flat magenta. `assetproc` keys and despills the background, splits
+match. Sprites are drawn on flat magenta. Glowing effects (`kind: "fx"`: the slash, impact,
+smoke, flame, frost, void, shockwave, sparkle and light-shaft sprites) are drawn on black instead
+and keyed by brightness, so their soft glow survives. `assetproc` keys and despills the background, splits
 sprite sheets into frames by connected components (falling back to the grid), lines up animation
 frames on a shared baseline, and resizes. Set `QF_MODEL` or `QF_JOBS` to change the model or the
 number of parallel generations.

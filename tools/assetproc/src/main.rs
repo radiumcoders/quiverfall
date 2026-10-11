@@ -7,6 +7,7 @@
 //! - sheets: keyed, split into frames by connected components (falls back to the grid),
 //!   ordered row by row, then written as `name_N.png` (animated sheets share one cell size,
 //!   feet on the bottom edge) plus `name.json` with the frame count
+//! - fx: black background keyed by brightness (glows stay soft), trimmed, resized
 //! - textures / backgrounds: resized only
 
 use image::{Rgba, RgbaImage, imageops};
@@ -39,6 +40,10 @@ fn opts(name: &str) -> Opts {
         "tiles" => o(128, 128, false, false),
         "bow" => o(160, 256, false, false),
         "exit" => o(320, 400, false, true),
+        "fx_rays" | "title_fg" => o(1600, 1600, false, false),
+        "ui_flourish" => o(720, 160, false, false),
+        "ui_pointer" => o(160, 160, false, false),
+        n if n.starts_with("fx_") => o(384, 384, false, false),
         _ => o(512, 512, false, false),
     }
 }
@@ -74,6 +79,12 @@ fn main() {
                 }
                 save(&k, &out_dir.join(format!("{name}.png")));
                 println!("sprite  {name} {}x{}", k.width(), k.height());
+            }
+            "fx" => {
+                let o = opts(name);
+                let k = fit(&trim(&luma_key(&img), 4), o.max_w, o.max_h);
+                save(&k, &out_dir.join(format!("{name}.png")));
+                println!("fx      {name} {}x{}", k.width(), k.height());
             }
             "texture" => {
                 let t = imageops::resize(&img, 512, 512, imageops::FilterType::Lanczos3);
@@ -118,6 +129,11 @@ fn bg_color(img: &RgbaImage) -> [f32; 3] {
             px.push([p[0], p[1], p[2]]);
         }
     }
+    // frames/layers may touch the border: prefer the border pixels that look like the key colour
+    let magenta: Vec<[u8; 3]> = px.iter().copied().filter(|p| p[0].min(p[2]) as i32 - p[1] as i32 > 60).collect();
+    if magenta.len() > px.len() / 8 {
+        px = magenta;
+    }
     let mut c = [0.0; 3];
     for (i, ci) in c.iter_mut().enumerate() {
         let mut v: Vec<u8> = px.iter().map(|p| p[i]).collect();
@@ -160,6 +176,21 @@ fn key(img: &RgbaImage) -> RgbaImage {
             }
         }
         *p = Rgba([r2 as u8, g as u8, b2 as u8, (a * 255.0) as u8]);
+    }
+    out
+}
+
+/// Black-background key for glowing effects: alpha from brightness, colour un-premultiplied.
+fn luma_key(img: &RgbaImage) -> RgbaImage {
+    let bg = bg_color(img);
+    let floor = bg.iter().cloned().fold(0.0f32, f32::max) + 6.0;
+    let mut out = img.clone();
+    for p in out.pixels_mut() {
+        let (r, g, b) = (p[0] as f32, p[1] as f32, p[2] as f32);
+        let m = r.max(g).max(b);
+        let a = ((m - floor) / (255.0 - floor)).clamp(0.0, 1.0);
+        let un = |c: f32| if a > 0.0 { (c / (a * 255.0 + floor * (1.0 - a)) * 255.0).clamp(0.0, 255.0) } else { 0.0 };
+        *p = Rgba([un(r) as u8, un(g) as u8, un(b) as u8, (a.powf(0.9) * 255.0) as u8]);
     }
     out
 }

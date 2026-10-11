@@ -1,4 +1,4 @@
-//! Particles, lights, screen shake, ambient motes.
+//! Particles, one-shot effect sprites (flashes), lights, screen shake, ambient motes.
 
 use bevy::prelude::*;
 
@@ -67,6 +67,68 @@ impl Burst {
     }
 }
 
+/// One of the generated effect sprites (`assets/art/fx_*.png`), same order as `art::FX_NAMES`.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum FxKind {
+    Slash,
+    Impact,
+    Smoke,
+    Flame,
+    Frost,
+    Void,
+    Ring,
+    Spark,
+}
+
+/// A one-shot effect sprite that grows/shrinks, spins and fades over its life.
+#[derive(Message, Clone, Copy)]
+pub struct Flash {
+    pub pos: Vec2,
+    pub kind: FxKind,
+    pub size: (f32, f32),
+    pub life: f32,
+    pub color: Color,
+    pub angle: f32,
+    pub spin: f32,
+    pub vel: Vec2,
+    pub flip: bool,
+    /// stays glued to this entity (offset = pos relative to it)
+    pub follow: Option<Entity>,
+}
+
+impl Flash {
+    pub fn new(pos: Vec2, kind: FxKind, size: (f32, f32), life: f32, color: Color) -> Self {
+        Self { pos, kind, size, life, color, angle: 0.0, spin: 0.0, vel: Vec2::ZERO, flip: false, follow: None }
+    }
+    pub fn angle(mut self, a: f32) -> Self {
+        self.angle = a;
+        self
+    }
+    pub fn spin(mut self, s: f32) -> Self {
+        self.spin = s;
+        self
+    }
+    pub fn vel(mut self, v: Vec2) -> Self {
+        self.vel = v;
+        self
+    }
+    pub fn flip(mut self, f: bool) -> Self {
+        self.flip = f;
+        self
+    }
+    pub fn follow(mut self, e: Entity) -> Self {
+        self.follow = Some(e);
+        self
+    }
+}
+
+#[derive(Component)]
+pub struct FlashFx {
+    f: Flash,
+    t: f32,
+    offset: Vec2,
+}
+
 #[derive(Component)]
 pub struct Particle {
     vel: Vec2,
@@ -116,8 +178,125 @@ fn rnd_dir() -> Vec2 {
     Vec2::from_angle(rnd() * std::f32::consts::TAU)
 }
 
-pub fn spawn_bursts(mut commands: Commands, art: Res<Art>, mut msgs: MessageReader<Burst>) {
+/// The painted flash that accompanies a particle burst, if any.
+fn burst_flashes(b: &Burst, out: &mut Vec<Flash>) {
+    let p = b.pos;
+    let ang = rnd() * std::f32::consts::TAU;
+    match b.kind {
+        BurstKind::Hit => {
+            let s = 34.0 + b.n as f32 * 3.0;
+            out.push(Flash::new(p, FxKind::Impact, (s * 0.6, s * 1.4), 0.16, glow(b.color, 1.8)).angle(ang));
+        }
+        BurstKind::Embers if b.n >= 6 => {
+            out.push(Flash::new(p, FxKind::Flame, (34.0, 58.0), 0.45, Color::srgb(2.4, 1.5, 0.8)).vel(Vec2::new(0.0, 50.0)));
+            out.push(Flash::new(p, FxKind::Impact, (20.0, 60.0), 0.18, Color::srgb(2.6, 1.4, 0.5)).angle(ang));
+        }
+        BurstKind::Frost if b.n >= 8 => {
+            out.push(Flash::new(p, FxKind::Frost, (30.0, 76.0), 0.35, Color::srgb(1.5, 2.0, 2.4)).angle(ang).spin(0.8));
+        }
+        BurstKind::Sparks if b.n >= 4 => {
+            out.push(Flash::new(p, FxKind::Spark, (44.0, 8.0), 0.22, Color::srgb(2.6, 2.3, 1.6)).angle(ang * 0.1));
+        }
+        BurstKind::Blink => {
+            out.push(Flash::new(p, FxKind::Void, (24.0, 104.0), 0.42, Color::srgb(1.8, 1.0, 2.6)).angle(ang).spin(-5.0));
+        }
+        BurstKind::Death => {
+            let big = b.n > 30;
+            out.push(Flash::new(p, FxKind::Ring, (20.0, if big { 420.0 } else { 150.0 }), if big { 0.8 } else { 0.45 }, Color::srgb(2.2, 1.8, 1.2)).angle(ang));
+            out.push(Flash::new(p, FxKind::Impact, (30.0, if big { 220.0 } else { 90.0 }), 0.22, Color::srgb(2.4, 2.0, 1.5)).angle(ang));
+        }
+        BurstKind::Dust if b.n >= 4 => {
+            let big = b.n >= 20;
+            let puffs = if big { 6 } else { 2 };
+            for i in 0..puffs {
+                let side = if i % 2 == 0 { -1.0 } else { 1.0 };
+                let sp = if big { 90.0 } else { 40.0 };
+                out.push(
+                    Flash::new(p + Vec2::new(side * 6.0, 4.0), FxKind::Smoke, (14.0, if big { 70.0 } else { 34.0 }), 0.5 + rnd() * 0.2, Color::srgba(0.75, 0.78, 0.82, 0.55))
+                        .vel(Vec2::new(side * sp * (0.5 + rnd()), 12.0 + rnd() * 20.0))
+                        .angle(ang + i as f32)
+                        .spin(side * 0.6)
+                        .flip(side > 0.0),
+                );
+            }
+            if big {
+                out.push(Flash::new(p, FxKind::Ring, (40.0, 320.0), 0.5, Color::srgba(1.6, 1.4, 1.1, 0.8)));
+            }
+        }
+        _ => {}
+    }
+}
+
+fn glow(c: Color, k: f32) -> Color {
+    let l = c.to_linear();
+    Color::linear_rgba(l.red * k, l.green * k, l.blue * k, l.alpha)
+}
+
+pub fn spawn_flashes(mut commands: Commands, art: Res<Art>, mut msgs: MessageReader<Flash>, follow: Query<&Transform>) {
+    for f in msgs.read() {
+        spawn_flash(&mut commands, &art, *f, &follow);
+    }
+}
+
+fn spawn_flash(commands: &mut Commands, art: &Art, f: Flash, follow: &Query<&Transform>) {
+    let offset = match f.follow.and_then(|e| follow.get(e).ok()) {
+        Some(t) => f.pos - t.translation.truncate(),
+        None => Vec2::ZERO,
+    };
+    commands.spawn((
+        LevelEntity,
+        FlashFx { f, t: 0.0, offset },
+        Sprite {
+            image: art.fx[f.kind as usize].clone(),
+            custom_size: Some(Vec2::splat(f.size.0)),
+            color: f.color,
+            flip_x: f.flip,
+            ..default()
+        },
+        Transform::from_translation(f.pos.extend(8.5)).with_rotation(Quat::from_rotation_z(f.angle)),
+    ));
+}
+
+pub fn update_flashes(
+    mut commands: Commands,
+    time: Res<Time>,
+    images: Res<Assets<Image>>,
+    art: Res<Art>,
+    targets: Query<&Transform, Without<FlashFx>>,
+    mut q: Query<(Entity, &mut FlashFx, &mut Transform, &mut Sprite)>,
+) {
+    let dt = time.delta_secs().min(1.0 / 30.0);
+    for (e, mut fx, mut t, mut s) in &mut q {
+        fx.t += dt;
+        let k = fx.t / fx.f.life;
+        if k >= 1.0 {
+            commands.entity(e).despawn();
+            continue;
+        }
+        let ease = 1.0 - (1.0 - k).powi(3);
+        let size = fx.f.size.0 + (fx.f.size.1 - fx.f.size.0) * ease;
+        // keep the painted aspect ratio, fit the long side to `size`
+        let img = crate::art::img_size(&images, &art.fx[fx.f.kind as usize]);
+        let aspect = if img.y > 0.0 { img.x / img.y } else { 1.0 };
+        s.custom_size = Some(if aspect >= 1.0 { Vec2::new(size, size / aspect) } else { Vec2::new(size * aspect, size) });
+        // quick pop in, smooth fade out
+        let a = (k / 0.12).min(1.0) * (1.0 - k).powf(1.4);
+        s.color = fx.f.color.with_alpha(fx.f.color.alpha() * a);
+        let vel = fx.f.vel;
+        fx.offset += vel * dt;
+        fx.f.vel *= (1.0 - 2.5 * dt).max(0.0);
+        let base = fx.f.follow.and_then(|f| targets.get(f).ok()).map(|t| t.translation.truncate());
+        let pos = base.unwrap_or(fx.f.pos) + fx.offset;
+        t.translation.x = pos.x;
+        t.translation.y = pos.y;
+        t.rotate_z(fx.f.spin * dt);
+    }
+}
+
+pub fn spawn_bursts(mut commands: Commands, art: Res<Art>, mut msgs: MessageReader<Burst>, follow: Query<&Transform>) {
+    let mut flashes = Vec::new();
     for b in msgs.read() {
+        burst_flashes(b, &mut flashes);
         for _ in 0..b.n {
             let (vel, life, grav, drag, s0, s1) = match b.kind {
                 BurstKind::Dust => (Vec2::new((rnd() - 0.5) * 90.0, rnd() * 50.0), 0.5, -20.0, 2.0, 7.0, 14.0),
@@ -138,6 +317,9 @@ pub fn spawn_bursts(mut commands: Commands, art: Res<Art>, mut msgs: MessageRead
                 Transform::from_translation((b.pos + rnd_dir() * rnd() * 6.0).extend(8.0)),
             ));
         }
+    }
+    for f in flashes {
+        spawn_flash(&mut commands, &art, f, &follow);
     }
 }
 

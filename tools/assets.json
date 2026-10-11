@@ -203,6 +203,80 @@
       "kind": "texture",
       "size": "square",
       "prompt": "Seamless tileable square texture of thick clear pale-blue ice seen flat from the front (no perspective, not a cube): frosted surface, faint internal cracks and trapped bubbles, slightly brighter frosty top edge, fills the entire image edge to edge. No text."
+    },
+    {
+      "name": "fx_slash",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A single crescent-shaped melee slash arc: one thick sweeping curved swoosh of pale silver-white light with faint teal edges, thickest in the middle and tapering to razor-sharp points at both ends. The arc bulges toward the RIGHT; its two pointed tips are at the upper-left and lower-left. A few thin speed streaks follow the curve."
+    },
+    {
+      "name": "fx_impact",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A radial hit-impact starburst: sharp white-hot spikes of light of uneven lengths radiating from a small brilliant center, with a faint warm cream glow, hand-drawn ink style like a comic impact flash."
+    },
+    {
+      "name": "fx_smoke",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A single soft round puff of pale grey dust and smoke, billowing cloud with curling wispy edges, slightly brighter on top, semi-transparent."
+    },
+    {
+      "name": "fx_flame",
+      "kind": "fx",
+      "size": "portrait 2:3",
+      "prompt": "A single tall flickering tongue of fire: white-yellow hot core, orange-gold body, deep red wispy tips curling upward, with two or three tiny rising sparks."
+    },
+    {
+      "name": "fx_frost",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A burst of sharp pale cyan ice crystal shards exploding outward from the center in every direction, faceted crystals of different sizes, frosty white sparkle in the middle."
+    },
+    {
+      "name": "fx_void",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A swirling violet void portal: a ring of spiralling purple and magenta energy wisps and arcane sparks around a completely dark hollow center, seen face-on."
+    },
+    {
+      "name": "fx_ring",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A single thin circular shockwave ring of pale golden-white light, glowing softly, slightly uneven painterly brush stroke, with a hollow completely black center."
+    },
+    {
+      "name": "fx_spark",
+      "kind": "fx",
+      "size": "square",
+      "prompt": "A single four-pointed star sparkle glint with long thin needle rays (horizontal and vertical rays longer than the diagonals), white center with a pale teal glow."
+    },
+    {
+      "name": "fx_rays",
+      "kind": "fx",
+      "size": "landscape 16:9",
+      "prompt": "Soft volumetric god rays: five or six long diagonal shafts of pale cold light falling from the upper-left toward the lower-right, fading out smoothly toward the bottom, faint floating dust in the beams, very soft edges."
+    },
+    {
+      "name": "ui_flourish",
+      "kind": "sprite",
+      "size": "landscape 16:9",
+      "prompt": "A single ornamental horizontal divider flourish, pale bone-white with faint silver highlights: perfectly symmetrical thin filigree with curling vine scrolls and thorn tips extending left and right, a small diamond in the center. Very wide and thin, about 8 times wider than tall."
+    },
+    {
+      "name": "ui_pointer",
+      "kind": "sprite",
+      "size": "square",
+      "prompt": "A single small ornamental menu pointer in pale bone-white: a gothic fleur-like flourish with curling scrolls, pointing to the RIGHT, sharp tip on the right side, thin and elegant."
+    },
+    {
+      "name": "title_fg",
+      "kind": "layer",
+      "size": "landscape 16:9",
+      "prompt": "A foreground parallax frame layer for a title screen: near-black jagged cave rock outcrops with hanging roots, thin vines and stalactites hugging the LEFT edge, the RIGHT edge and the BOTTOM edge of the image, very dark slate with a faint cold teal rim light. The whole center and top-center of the image is completely empty."
     }
-  ]
+  ],
+  "fx_style": "Hand-painted 2D game visual effect in the style of Hollow Knight: luminous, crisp shape, soft glow falloff, painterly brush texture.",
+  "fx_bg": "Isolated on a plain solid flat pure black (#000000) background that fills the entire image. The effect is the only thing in the image, centered, with generous empty black margin on every side. No text, no labels, no border, no ground, no characters."
 }

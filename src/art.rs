@@ -25,6 +25,13 @@ pub struct Art {
     pub tex_wood: Handle<Image>,
     pub tex_ice: Handle<Image>,
     pub title: Handle<Image>,
+    pub title_fg: Handle<Image>,
+    /// generated effect sprites, indexed by `FX_*`
+    pub fx: Vec<Handle<Image>>,
+    pub fx_rays: Handle<Image>,
+    pub ui_flourish: Handle<Image>,
+    pub ui_pointer: Handle<Image>,
+    pub chapter_thumbs: Vec<Handle<Image>>,
     pub font_title: Handle<Font>,
     pub font_body: Handle<Font>,
     // procedural
@@ -59,6 +66,7 @@ pub const TILE_CRUMBLE: usize = 3;
 pub const TILE_GATE: usize = 4;
 pub const TILE_PLANK: usize = 5;
 pub const TILE_WATER: usize = 7;
+pub const FX_NAMES: [&str; 8] = ["slash", "impact", "smoke", "flame", "frost", "void", "ring", "spark"];
 
 pub struct Palette {
     pub clear: Color,
@@ -189,6 +197,12 @@ pub fn load_art(mut commands: Commands, server: Res<AssetServer>, mut images: Re
         tex_wood: one("tex_wood"),
         tex_ice: one("tile_ice"),
         title: one("title"),
+        title_fg: one("title_fg"),
+        fx: FX_NAMES.iter().map(|n| one(&format!("fx_{n}"))).collect(),
+        fx_rays: one("fx_rays"),
+        ui_flourish: one("ui_flourish"),
+        ui_pointer: one("ui_pointer"),
+        chapter_thumbs: crate::title::chapter_thumbs(&server),
         font_title: server.load("fonts/Cinzel.ttf"),
         font_body: server.load("fonts/Cormorant.ttf"),
         glow,

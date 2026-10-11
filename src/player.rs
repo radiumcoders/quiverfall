@@ -2,12 +2,13 @@
 
 use bevy::prelude::*;
 use std::collections::VecDeque;
+use std::f32::consts::FRAC_PI_2;
 
 use crate::arrows::{ArrowKind, spawn_arrow};
 use crate::art::Art;
 use crate::audio::{PlaySfx, Sfx};
 use crate::config::*;
-use crate::fx::{Burst, Shake};
+use crate::fx::{Burst, Flash, FxKind, Shake};
 use crate::game::{LevelEntity, Progress};
 use crate::input::Controls;
 use crate::level::{CrumbleState, Level, Tile};
@@ -146,6 +147,7 @@ pub fn player_update(
     plats: Query<(Entity, &Transform, &Platform), Without<Player>>,
     mut sfx: MessageWriter<PlaySfx>,
     mut fx: MessageWriter<Burst>,
+    mut flashes: MessageWriter<Flash>,
     mut shake: ResMut<Shake>,
 ) {
     let Some(mut level) = level else { return };
@@ -332,7 +334,13 @@ pub fn player_update(
                 p.draw = 0.0;
                 sfx.write(PlaySfx(Sfx::Draw, 0.35));
             }
+            let before = p.draw;
             p.draw += dt;
+            // glint on the arrowhead when a Steel shot reaches full draw
+            if p.selected == 0 && before < DRAW_TIME && p.draw >= DRAW_TIME {
+                let tip = shoulder + p.aim * 22.0;
+                flashes.write(Flash::new(tip, FxKind::Spark, (8.0, 40.0), 0.3, Color::srgb(2.4, 2.6, 2.8)).follow(me));
+            }
             if p.aim.x.abs() > 0.15 {
                 p.facing = p.aim.x.signum();
             }
@@ -353,6 +361,10 @@ pub fn player_update(
                 let grav = ARROW_GRAV_MAX + (ARROW_GRAV_MIN - ARROW_GRAV_MAX) * power;
                 let start = shoulder + p.aim * 14.0;
                 spawn_arrow(&mut commands, &art, kind, start, p.aim * speed, grav, power);
+                if power >= 1.0 {
+                    let c = if kind == ArrowKind::Steel { Color::srgb(2.2, 2.3, 2.4) } else { kind.color() };
+                    flashes.write(Flash::new(start, FxKind::Spark, (40.0, 10.0), 0.14, c).angle(p.aim.to_angle()));
+                }
                 sfx.write(PlaySfx(Sfx::Release, 0.5));
                 // small recoil in the air
                 if !body.on_ground {
@@ -368,6 +380,11 @@ pub fn player_update(
             p.melee_down = !body.on_ground && c.move_y < 0.0;
             p.melee_hits.clear();
             sfx.write(PlaySfx(Sfx::Swipe, 0.5));
+            let (off, ang) = if p.melee_down { (Vec2::new(0.0, -24.0), -FRAC_PI_2) } else { (Vec2::new(p.facing * 26.0, 4.0), 0.0) };
+            let flip = p.facing < 0.0 && !p.melee_down;
+            flashes.write(
+                Flash::new(pos + off, FxKind::Slash, (48.0, 64.0), 0.18, Color::srgb(1.9, 2.0, 2.1)).angle(ang).flip(flip).follow(me),
+            );
         }
 
         // ---- move ----

@@ -25,7 +25,11 @@ JOBS = int(os.environ.get("QF_JOBS", "5"))
 
 
 def build_prompt(manifest, a):
-    parts = [a["prompt"], manifest["style"]]
+    if a["kind"] == "fx":
+        # glowing effects go on black and get luminance-keyed by assetproc
+        parts = [a["prompt"], manifest["fx_style"], manifest["fx_bg"]]
+    else:
+        parts = [a["prompt"], manifest["style"]]
     if a["kind"] in ("sprite", "sheet", "layer"):
         parts.append(manifest["sprite_bg"])
     if "size" in a:
