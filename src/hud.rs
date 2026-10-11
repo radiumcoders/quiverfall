@@ -62,8 +62,8 @@ pub struct ArrowName;
 const INK: Color = Color::srgb(0.92, 0.9, 0.84);
 const DIM: Color = Color::srgba(0.85, 0.85, 0.8, 0.55);
 
-fn text(s: impl Into<String>, size: f32, color: Color) -> (Text, TextFont, TextColor) {
-    (Text::new(s), TextFont { font_size: size.into(), ..default() }, TextColor(color))
+fn text(font: &Handle<Font>, s: impl Into<String>, size: f32, color: Color) -> (Text, TextFont, TextColor) {
+    (Text::new(s), TextFont { font: font.clone().into(), font_size: size.into(), ..default() }, TextColor(color))
 }
 
 pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
@@ -93,43 +93,31 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
                         r.spawn((OrbIcon(i), ImageNode::new(art.icons[art::ICON_ORB].clone()), Node { width: px(28), height: px(28), ..default() }));
                     }
                 });
-            });
-            // bottom-center: arrow bar
-            root.spawn(Node {
-                position_type: PositionType::Absolute,
-                bottom: px(18),
-                width: percent(100),
-                flex_direction: FlexDirection::Column,
-                align_items: AlignItems::Center,
-                row_gap: px(6),
-                ..default()
-            })
-            .with_children(|c| {
-                c.spawn((ArrowName, text("", 18.0, INK)));
-                c.spawn(Node { column_gap: px(10), align_items: AlignItems::End, ..default() }).with_children(|r| {
-                    for (i, _) in ArrowKind::ALL.iter().enumerate() {
-                        r.spawn((
-                            ArrowSlot(i),
-                            Node {
-                                width: px(52),
-                                height: px(52),
-                                border: UiRect::all(px(2)),
-                                border_radius: BorderRadius::all(px(30)),
-                                justify_content: JustifyContent::Center,
-                                align_items: AlignItems::Center,
-                                ..default()
-                            },
-                            BorderColor::all(Color::NONE),
-                            ImageNode::new(art.icons[i].clone()),
-                        ))
-                        .with_children(|s| {
-                            s.spawn((
-                                Node { position_type: PositionType::Absolute, bottom: px(-16), ..default() },
-                                text(format!("{}", i + 1), 12.0, DIM),
-                            ));
-                        });
-                    }
-                });
+                // quiver: one icon per unlocked arrow, the selected one larger and ringed
+                c.spawn(Node { column_gap: px(6), align_items: AlignItems::Center, padding: UiRect::new(px(4), px(0), px(6), px(0)), ..default() })
+                    .with_children(|r| {
+                        for (i, _) in ArrowKind::ALL.iter().enumerate() {
+                            r.spawn((
+                                ArrowSlot(i),
+                                Node {
+                                    width: px(34),
+                                    height: px(34),
+                                    border: UiRect::all(px(2)),
+                                    border_radius: BorderRadius::all(px(30)),
+                                    ..default()
+                                },
+                                BorderColor::all(Color::NONE),
+                                ImageNode::new(art.icons[i].clone()),
+                            ))
+                            .with_children(|s| {
+                                s.spawn((
+                                    Node { position_type: PositionType::Absolute, bottom: px(-15), left: px(12), ..default() },
+                                    text(&art.font_title, format!("{}", i + 1), 11.0, DIM),
+                                ));
+                            });
+                        }
+                        r.spawn((ArrowName, Node { margin: UiRect::left(px(8)), ..default() }, text(&art.font_title, "", 18.0, INK)));
+                    });
             });
             // boss bar
             root.spawn((
@@ -147,7 +135,7 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
                 },
             ))
             .with_children(|c| {
-                c.spawn(text("THE WARDEN", 20.0, Color::srgb(0.95, 0.75, 0.5)));
+                c.spawn(text(&art.font_title, "THE WARDEN", 20.0, Color::srgb(0.95, 0.75, 0.5)));
                 c.spawn((
                     Node { width: percent(100), height: px(10), border: UiRect::all(px(1)), ..default() },
                     BackgroundColor(Color::srgba(0.0, 0.0, 0.0, 0.6)),
@@ -160,7 +148,7 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
             // banner
             root.spawn(Node {
                 position_type: PositionType::Absolute,
-                top: percent(26),
+                top: percent(34),
                 width: percent(100),
                 flex_direction: FlexDirection::Column,
                 align_items: AlignItems::Center,
@@ -168,19 +156,19 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
                 ..default()
             })
             .with_children(|c| {
-                c.spawn((BannerTitle, text("", 54.0, INK), TextLayout::justify(Justify::Center)));
-                c.spawn((BannerSub, text("", 20.0, DIM), TextLayout::justify(Justify::Center)));
+                c.spawn((BannerTitle, text(&art.font_title, "", 54.0, INK), TextLayout::justify(Justify::Center)));
+                c.spawn((BannerSub, text(&art.font_body, "", 20.0, DIM), TextLayout::justify(Justify::Center)));
             });
             // hint
             root.spawn(Node {
                 position_type: PositionType::Absolute,
-                bottom: px(120),
+                bottom: px(56),
                 width: percent(100),
                 justify_content: JustifyContent::Center,
                 ..default()
             })
             .with_children(|c| {
-                c.spawn((HintNode, text("", 20.0, Color::srgb(0.85, 0.95, 0.92)), TextLayout::justify(Justify::Center)));
+                c.spawn((HintNode, text(&art.font_body, "", 20.0, Color::srgb(0.85, 0.95, 0.92)), TextLayout::justify(Justify::Center)));
             });
             // pause overlay
             root.spawn((
@@ -199,9 +187,9 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
                 BackgroundColor(Color::srgba(0.0, 0.0, 0.02, 0.7)),
             ))
             .with_children(|c| {
-                c.spawn(text("PAUSED", 56.0, INK));
-                c.spawn(text("Esc  resume        R  restart level        Q  quit to title", 18.0, DIM));
-                c.spawn(text(CONTROLS, 15.0, DIM));
+                c.spawn(text(&art.font_title, "PAUSED", 56.0, INK));
+                c.spawn(text(&art.font_body, "Esc  resume        R  restart level        Q  quit to title", 18.0, DIM));
+                c.spawn(text(&art.font_body, CONTROLS, 15.0, DIM));
             });
         });
 }
@@ -225,11 +213,12 @@ pub fn update_hud(
         Query<(&mut Text, &mut TextColor), With<BannerTitle>>,
         Query<(&mut Text, &mut TextColor), With<BannerSub>>,
         Query<&mut Text, With<HintNode>>,
-        Query<&mut Text, With<ArrowName>>,
+        Query<(&mut Text, &mut TextColor), With<ArrowName>>,
     )>,
     mut boss_root: Query<&mut Node, (With<BossBarRoot>, Without<ArrowSlot>, Without<BossBarFill>, Without<PauseOverlay>)>,
     mut boss_fill: Query<&mut Node, (With<BossBarFill>, Without<ArrowSlot>, Without<BossBarRoot>, Without<PauseOverlay>)>,
     mut pause: Query<&mut Node, (With<PauseOverlay>, Without<ArrowSlot>, Without<BossBarRoot>, Without<BossBarFill>)>,
+    mut sel: Local<(Option<usize>, f32)>,
 ) {
     let Ok(p) = players.single() else { return };
     for (m, mut img) in &mut masks {
@@ -246,7 +235,7 @@ pub fn update_hud(
         let unlocked = progress.unlocked[s.0];
         node.display = if unlocked { Display::Flex } else { Display::None };
         let sel = p.selected == s.0;
-        let sz = if sel { 64.0 } else { 46.0 };
+        let sz = if sel { 44.0 } else { 32.0 };
         node.width = px(sz);
         node.height = px(sz);
         img.color = if sel { Color::WHITE } else { Color::srgba(0.8, 0.8, 0.8, 0.6) };
@@ -266,10 +255,16 @@ pub fn update_hud(
     if let Ok(mut t) = texts.p2().single_mut() {
         t.0 = hint.0.clone().unwrap_or_default();
     }
-    if let Ok(mut t) = texts.p3().single_mut() {
+    // the arrow's name shows briefly after switching
+    if sel.0 != Some(p.selected) {
+        *sel = (Some(p.selected), 0.0);
+    }
+    sel.1 += time.delta_secs();
+    if let Ok((mut t, mut col)) = texts.p3().single_mut() {
         let k = ArrowKind::ALL[p.selected];
         let n = progress.unlocked.iter().filter(|u| **u).count();
         t.0 = if n > 1 { k.name().to_string() } else { String::new() };
+        col.0 = INK.with_alpha((2.0 - sel.1).clamp(0.0, 1.0));
     }
     if let Ok(mut n) = boss_root.single_mut() {
         n.display = if boss.active { Display::Flex } else { Display::None };
@@ -329,21 +324,21 @@ pub fn spawn_title(mut commands: Commands, art: Res<Art>, progress: Res<Progress
         .with_children(|c| {
             c.spawn((
                 Node { position_type: PositionType::Absolute, top: percent(9), ..default() },
-                text("QUIVERFALL", 96.0, Color::srgb(0.95, 0.93, 0.86)),
+                text(&art.font_title, "QUIVERFALL", 96.0, Color::srgb(0.95, 0.93, 0.86)),
             ));
             c.spawn((
                 Node { position_type: PositionType::Absolute, top: percent(27), ..default() },
-                text("an archer's descent", 22.0, DIM),
+                text(&art.font_body, "an archer's descent", 22.0, DIM),
             ));
-            c.spawn(text("Press Enter / Space / (A) to begin", 26.0, INK));
+            c.spawn(text(&art.font_title, "Press Enter / Space / (A) to begin", 26.0, INK));
             let mut levels = String::from("Level select:  ");
             for (i, src) in LEVEL_SOURCES.iter().enumerate() {
                 levels.push_str(&format!("{} {}    ", i + 1, parse_level(src).name));
             }
-            c.spawn(text(levels, 15.0, DIM));
-            c.spawn((text(CONTROLS, 14.0, DIM), TextLayout::justify(Justify::Center)));
+            c.spawn(text(&art.font_body, levels, 15.0, DIM));
+            c.spawn((text(&art.font_body, CONTROLS, 14.0, DIM), TextLayout::justify(Justify::Center)));
             if progress.deaths > 0 {
-                c.spawn(text(format!("deaths so far: {}", progress.deaths), 14.0, DIM));
+                c.spawn(text(&art.font_body, format!("deaths so far: {}", progress.deaths), 14.0, DIM));
             }
         });
 }
@@ -377,14 +372,14 @@ pub fn title_input(
 
 /// Arrows you'd have collected before reaching level `i`.
 pub fn unlock_for_level(progress: &mut Progress, i: usize) {
-    let by_level = [0usize, 1, 3, 5, 5];
+    let by_level = [0usize, 0, 1, 3, 5];
     for k in 0..=by_level[i.min(4)] {
         progress.unlocked[k] = true;
     }
     progress.level = i;
 }
 
-pub fn spawn_card(commands: &mut Commands, state: AppState, title: &str, lines: &[String]) {
+pub fn spawn_card(commands: &mut Commands, art: &Art, state: AppState, title: &str, lines: &[String]) {
     commands
         .spawn((
             DespawnOnExit(state),
@@ -401,11 +396,11 @@ pub fn spawn_card(commands: &mut Commands, state: AppState, title: &str, lines: 
             BackgroundColor(Color::srgba(0.0, 0.0, 0.02, 0.82)),
         ))
         .with_children(|c| {
-            c.spawn(text(title, 60.0, INK));
+            c.spawn(text(&art.font_title, title, 60.0, INK));
             for l in lines {
-                c.spawn(text(l.clone(), 20.0, DIM));
+                c.spawn(text(&art.font_body, l.clone(), 20.0, DIM));
             }
-            c.spawn(text("Press Enter / Space / (A)", 18.0, INK));
+            c.spawn(text(&art.font_title, "Press Enter / Space / (A)", 18.0, INK));
         });
 }
 
@@ -413,10 +408,11 @@ fn fmt_time(t: f32) -> String {
     format!("{}:{:02}", (t / 60.0) as u32, (t % 60.0) as u32)
 }
 
-pub fn spawn_level_done(mut commands: Commands, progress: Res<Progress>) {
+pub fn spawn_level_done(mut commands: Commands, progress: Res<Progress>, art: Res<Art>) {
     let name = parse_level(LEVEL_SOURCES[progress.level]).name;
     spawn_card(
         &mut commands,
+        &art,
         AppState::LevelDone,
         "Level Cleared",
         &[name, format!("time {}    deaths {}", fmt_time(progress.level_time), progress.deaths)],
@@ -436,9 +432,10 @@ pub fn level_done_input(
     }
 }
 
-pub fn spawn_victory(mut commands: Commands, progress: Res<Progress>) {
+pub fn spawn_victory(mut commands: Commands, progress: Res<Progress>, art: Res<Art>) {
     spawn_card(
         &mut commands,
+        &art,
         AppState::Victory,
         "You escaped the deep",
         &[

@@ -109,6 +109,11 @@ pub fn wait_for_assets(
         .chain(&art.icons)
         .chain(&art.tiles)
         .chain([&art.tex_stone, &art.tex_wood, &art.bow, &art.exit]);
+    for h in [art.font_title.id().untyped(), art.font_body.id().untyped()] {
+        if !server.is_loaded_with_dependencies(h) && !matches!(server.get_load_state(h), Some(bevy::asset::LoadState::Failed(_))) {
+            return;
+        }
+    }
     for h in all {
         if let Some(bevy::asset::LoadState::Failed(_)) = server.get_load_state(h) {
             continue; // missing art shows as blank, don't block
@@ -180,7 +185,7 @@ pub fn load_level(
     let far_h = VIEW_H * 1.25;
     commands.spawn((
         LevelEntity,
-        Sprite { image: server.load(far.clone()), custom_size: Some(Vec2::new(far_h * 16.0 / 9.0, far_h)), color: Color::srgb(0.75, 0.75, 0.8), ..default() },
+        Sprite { image: server.load(far.clone()), custom_size: Some(Vec2::new(far_h * 16.0 / 9.0, far_h)), color: Color::srgb(0.68, 0.68, 0.72), ..default() },
         Transform::from_xyz(0.0, 0.0, -100.0),
         Parallax { factor: Vec2::new(0.92, 0.95), base: Vec2::ZERO },
     ));
@@ -196,7 +201,7 @@ pub fn load_level(
                 image: server.load(mid.clone()),
                 custom_size: Some(Vec2::new(mid_w + 1.0, mid_h)),
                 flip_x: i % 2 != 0,
-                color: Color::srgb(0.55, 0.58, 0.65),
+                color: Color::srgb(0.34, 0.37, 0.43),
                 ..default()
             },
             Transform::from_xyz(0.0, 0.0, -60.0),
@@ -302,9 +307,9 @@ pub fn spawn_tile_visual(commands: &mut Commands, level: &Level, p: IVec2, art: 
             let d = depth(level, p);
             let shade = match d {
                 1 => 1.0,
-                2 => 0.62,
-                3 => 0.42,
-                _ => 0.3,
+                2 => 0.72,
+                3 => 0.55,
+                _ => 0.44,
             };
             let tint = pal.stone_tint.to_srgba();
             let base = if t == Tile::Wood { 1.15 } else { 1.0 };
@@ -424,11 +429,22 @@ pub fn spawn_tile_visual(commands: &mut Commands, level: &Level, p: IVec2, art: 
                 commands.entity(*e).insert(CrumbleVisual(p, c));
             }
         }
-        Tile::Ice => spawn(
-            commands,
-            Sprite { image: art.tiles[art::TILE_ICE].clone(), custom_size: Some(tsize + Vec2::splat(1.0)), ..default() },
-            Transform::from_translation(c.extend(0.2)),
-        ),
+        Tile::Ice => {
+            let isz = art::img_size(images, &art.tex_ice).max(Vec2::splat(1.0));
+            let cell = isz / 4.0;
+            let rx = p.x.rem_euclid(4) as f32;
+            let rect = Rect::new(rx * cell.x, 0.0, (rx + 1.0) * cell.x, cell.y);
+            spawn(
+                commands,
+                Sprite { image: art.tex_ice.clone(), rect: Some(rect), custom_size: Some(tsize + Vec2::splat(0.6)), color: Color::srgb(1.1, 1.15, 1.2), ..default() },
+                Transform::from_translation(c.extend(0.2)),
+            );
+            spawn(
+                commands,
+                Sprite { image: art.rim.clone(), custom_size: Some(Vec2::new(TILE + 0.5, 8.0)), color: Color::srgba(0.85, 0.95, 1.0, 0.8), ..default() },
+                Transform::from_translation((c + Vec2::new(0.0, TILE / 2.0 - 4.0)).extend(0.3)),
+            );
+        }
         Tile::Gate(id) => {
             spawn(
                 commands,

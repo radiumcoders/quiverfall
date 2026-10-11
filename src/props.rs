@@ -251,6 +251,10 @@ pub fn props_update(
                     // already owned (e.g. after a respawn)
                     *taken = true;
                 }
+                if *taken && sprite.color != Color::srgb(0.55, 0.55, 0.6) {
+                    sprite.color = Color::srgb(0.55, 0.55, 0.6);
+                    commands.entity(ent).remove::<Light>();
+                }
                 if !*taken && (ppos - (pos + Vec2::new(0.0, 30.0))).length() < 44.0 {
                     *taken = true;
                     progress.unlocked[kind.index()] = true;

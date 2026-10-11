@@ -103,6 +103,7 @@ fn main() {
                 fx::update_particles,
                 fx::ambient_motes,
                 fx::attach_lights,
+                fx::remove_lights,
                 fx::flicker_lights,
                 camera::fit_vignette,
             )

@@ -209,15 +209,40 @@ pub fn ambient_motes(
     }
 }
 
-pub fn attach_lights(mut commands: Commands, art: Res<Art>, added: Query<(Entity, &Light), Added<Light>>) {
-    for (e, l) in &added {
+pub fn attach_lights(
+    mut commands: Commands,
+    art: Res<Art>,
+    added: Query<(Entity, &Light, Option<&Sprite>, Option<&bevy::sprite::Anchor>), Added<Light>>,
+) {
+    for (e, l, sprite, anchor) in &added {
+        // centre the glow on the sprite, not on its anchor point
+        let size = sprite.and_then(|s| s.custom_size).unwrap_or(Vec2::ZERO);
+        let off = -anchor.map(|a| a.0).unwrap_or(Vec2::ZERO) * size;
         commands.entity(e).with_children(|c| {
             c.spawn((
                 LightGlow,
                 Sprite { image: art.glow.clone(), custom_size: Some(Vec2::splat(l.radius * 2.0)), color: l.color.with_alpha(0.22), ..default() },
-                Transform::from_xyz(0.0, 0.0, -0.6),
+                Transform::from_xyz(off.x, off.y, -0.6),
             ));
         });
+    }
+}
+
+/// Lights that were switched off take their glow with them.
+pub fn remove_lights(
+    mut commands: Commands,
+    mut removed: RemovedComponents<Light>,
+    children: Query<&Children>,
+    glows: Query<(), With<LightGlow>>,
+) {
+    for e in removed.read() {
+        if let Ok(ch) = children.get(e) {
+            for c in ch.iter() {
+                if glows.contains(c) {
+                    commands.entity(c).despawn();
+                }
+            }
+        }
     }
 }
 
@@ -233,7 +258,6 @@ pub fn flicker_lights(
                 let f = 1.0 + l.flicker * ((t * 13.0).sin() * 0.6 + (t * 7.3).sin() * 0.4);
                 s.color = l.color.with_alpha(0.22 * f);
                 s.custom_size = Some(Vec2::splat(l.radius * 2.0 * f));
-                // keep the glow upright even if the parent rotates (arrows)
                 tr.rotation = Quat::IDENTITY;
             }
         }

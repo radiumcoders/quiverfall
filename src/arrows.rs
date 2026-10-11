@@ -424,7 +424,6 @@ pub fn arrows_update(
                         let face_x = if h.normal.x > 0.0 { (t.x + 1) as f32 * TILE } else { t.x as f32 * TILE };
                         (Vec2::new(face_x + h.normal.x * (LIFT_WIDTH / 2.0 - 8.0), h.pos.y), h.normal.x)
                     };
-                    info!("lift at {center:?} (hit {:?} normal {:?})", h.pos, h.normal);
                     spawn_lift(&mut commands, &art, center, wall, &mut players);
                     sfx.write(PlaySfx(Sfx::Lift, 0.7));
                     fx.write(Burst::trail_n(center, kind.color(), 14));
