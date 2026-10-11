@@ -401,7 +401,7 @@ pub fn enemies_update(
             EnemyKind::Warden => {
                 grav(&mut body);
                 if !e.awake {
-                    if to_p.x.abs() < 11.0 * TILE && to_p.y.abs() < 6.0 * TILE {
+                    if to_p.x.abs() < 18.0 * TILE && to_p.y.abs() < 6.0 * TILE {
                         e.awake = true;
                         level.boss_active = true;
                         shake.add(0.8);

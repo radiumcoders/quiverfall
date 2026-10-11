@@ -154,7 +154,10 @@ pub fn arrows_update(
         if a.kind != ArrowKind::Steel && rand::random::<f32>() < 0.7 {
             fx.write(Burst::trail(tf.translation.truncate(), a.kind.color()));
         }
-        a.vel.y -= a.grav * dt;
+        // arrows fly flat for a moment before they start to drop
+        if a.life > 0.12 {
+            a.vel.y -= a.grav * dt;
+        }
         let mut pos = tf.translation.truncate();
         let step_len = (a.vel.length() * dt).max(0.001);
         let steps = (step_len / 4.0).ceil() as i32;
@@ -198,7 +201,7 @@ pub fn arrows_update(
                 let r = match *p {
                     Prop::Target { .. } => 14.0,
                     Prop::Brazier { .. } => 14.0,
-                    Prop::Anchor => 16.0,
+                    Prop::Anchor => 24.0,
                     _ => continue,
                 };
                 let c = pt.translation.truncate();
@@ -263,7 +266,7 @@ pub fn arrows_update(
                     a.kind = ArrowKind::Steel;
                     continue;
                 }
-                let dmg = if a.power >= 0.99 { 2 } else { 1 };
+                let dmg = if a.power >= 0.99 && kind == ArrowKind::Steel { 2 } else { 1 };
                 match kind {
                     ArrowKind::Ember => {
                         e.burn = 2.0;
@@ -290,6 +293,7 @@ pub fn arrows_update(
                             pb.vel = Vec2::ZERO;
                             p.can_dash = true;
                             p.tether = None;
+                            p.hanging = false;
                             fx.write(Burst::blink(ppos));
                             fx.write(Burst::blink(epos));
                         }
@@ -464,6 +468,7 @@ pub fn arrows_update(
                         p.can_dash = true;
                         p.air_hang = AIR_HANG_TIME;
                         p.tether = None;
+                        p.hanging = false;
                         fx.write(Burst::blink(from));
                         fx.write(Burst::blink(spot));
                         sfx.write(PlaySfx(Sfx::Blink, 0.7));
@@ -502,8 +507,9 @@ fn start_tether(
     sfx: &mut MessageWriter<PlaySfx>,
 ) {
     if let Ok((mut p, mut b, _)) = players.single_mut() {
-        p.tether = Some(target - Vec2::new(0.0, 14.0));
+        p.tether = Some(target - Vec2::new(0.0, 26.0));
         p.tether_t = 0.0;
+        p.hanging = false;
         p.dash_t = 0.0;
         b.drop_through = 0.0;
         sfx.write(PlaySfx(Sfx::Tether, 0.7));

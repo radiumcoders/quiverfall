@@ -37,6 +37,8 @@ pub struct Player {
     pub melee_hits: Vec<Entity>,
     pub tether: Option<Vec2>,
     pub tether_t: f32,
+    /// hanging from the tether point (after the zip arrives)
+    pub hanging: bool,
     pub last_safe: Vec2,
     pub hazard_t: f32,
     pub dead_t: f32,
@@ -84,6 +86,7 @@ pub fn spawn_player(commands: &mut Commands, art: &Art, pos: Vec2) {
                 melee_hits: vec![],
                 tether: None,
                 tether_t: 0.0,
+                hanging: false,
                 last_safe: pos,
                 hazard_t: 0.0,
                 dead_t: 0.0,
@@ -129,6 +132,7 @@ impl Player {
         self.invuln = INVULN;
         self.drawing = false;
         self.tether = None;
+        self.hanging = false;
         true
     }
 }
@@ -222,22 +226,43 @@ pub fn player_update(
         // keep the last aim while drawing (keys/sticks are often released together with fire)
         p.aim = aim.unwrap_or(if p.drawing { p.aim } else { Vec2::new(p.facing, 0.0) });
 
-        // ---- tether zip ----
+        // ---- tether zip / hang ----
         if let Some(target) = p.tether {
             p.tether_t += dt;
             let d = target - pos;
-            if d.length() < 22.0 || p.tether_t > 0.75 || (p.tether_t > 0.05 && (body.wall != 0 || body.ceiling)) {
-                p.tether = None;
-                body.vel = d.normalize_or_zero() * 380.0 + Vec2::new(0.0, 260.0);
+            if p.hanging {
+                body.vel = Vec2::ZERO;
+                pos = target;
                 p.can_dash = true;
                 p.air_hang = AIR_HANG_TIME;
+                if c.jump_pressed {
+                    p.tether = None;
+                    p.hanging = false;
+                    p.hanging = false;
+                    body.vel = Vec2::new(c.move_x * RUN_SPEED, JUMP_VEL * 0.9);
+                    sfx.write(PlaySfx(Sfx::Jump, 0.5));
+                } else if c.move_y < 0.0 || p.tether_t > 2.5 {
+                    p.tether = None;
+                    p.hanging = false;
+                    p.hanging = false;
+                }
+            } else if d.length() < 14.0 {
+                p.hanging = true;
+                p.tether_t = 0.0;
+                body.vel = Vec2::ZERO;
+            } else if p.tether_t > 0.75 || (p.tether_t > 0.05 && (body.wall != 0 || body.ceiling)) {
+                // couldn't reach it: let go
+                p.tether = None;
+                p.hanging = false;
+                body.vel = d.normalize_or_zero() * 300.0;
             } else if c.jump_pressed {
                 p.tether = None;
+                p.hanging = false;
                 body.vel = d.normalize_or_zero() * 420.0 + Vec2::new(0.0, JUMP_VEL * 0.8);
                 p.can_dash = true;
                 sfx.write(PlaySfx(Sfx::Jump, 0.5));
             } else {
-                body.vel = d.normalize() * TETHER_SPEED;
+                body.vel = d.normalize() * TETHER_SPEED.min(d.length() / dt);
             }
         } else if p.dash_t > 0.0 {
             // ---- dash ----
@@ -304,7 +329,7 @@ pub fn player_update(
         p.jump_was_held = c.jump_held;
 
         // ---- bow ----
-        if c.fire_held && p.melee_t <= 0.0 && p.tether.is_none() {
+        if c.fire_held && p.melee_t <= 0.0 && (p.tether.is_none() || p.hanging) {
             if !p.drawing {
                 p.drawing = true;
                 p.draw = 0.0;
@@ -319,7 +344,8 @@ pub fn player_update(
             p.drawing = false;
             let kind = ArrowKind::ALL[p.selected];
             let power = (p.draw / DRAW_TIME).clamp(0.0, 1.0);
-            let power = if kind == ArrowKind::Steel { power.max(0.15) } else { power.max(0.6) };
+            // utility arrows always fly fast and flat - only steel rewards a full draw
+            let power = if kind == ArrowKind::Steel { power.max(0.15) } else { 1.0 };
             if kind != ArrowKind::Steel && p.charges < 1.0 {
                 sfx.write(PlaySfx(Sfx::Fizzle, 0.5));
             } else {
@@ -348,7 +374,9 @@ pub fn player_update(
         }
 
         // ---- move ----
-        move_body(&mut pos, &mut body, dt, &level, &plat_refs, me);
+        if !p.hanging {
+            move_body(&mut pos, &mut body, dt, &level, &plat_refs, me);
+        }
 
         if body.on_ground && !p.was_ground {
             p.squash = 0.3;
@@ -396,6 +424,7 @@ pub fn player_update(
             if p.hp > 0 {
                 p.hazard_t = 0.6;
                 p.tether = None;
+                p.hanging = false;
                 p.dash_t = 0.0;
             }
             body.vel = Vec2::ZERO;

@@ -383,7 +383,7 @@ pub fn freeze_water(level: &mut Level, p: IVec2) -> Vec<IVec2> {
     }
     let mut out = vec![];
     for dir in [-1, 1] {
-        for i in 0..8 {
+        for i in 0..11 {
             if dir == 1 && i == 0 {
                 continue;
             }
