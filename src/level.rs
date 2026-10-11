@@ -184,8 +184,6 @@ pub fn parse_level(src: &str) -> LevelDef {
 #[derive(Resource)]
 pub struct Level {
     pub index: usize,
-    pub name: String,
-    pub subtitle: String,
     pub biome: Biome,
     pub w: i32,
     pub h: i32,
@@ -204,8 +202,6 @@ impl Level {
     pub fn from_def(index: usize, def: &LevelDef) -> Self {
         Self {
             index,
-            name: def.name.clone(),
-            subtitle: def.subtitle.clone(),
             biome: def.biome,
             w: def.w,
             h: def.h,

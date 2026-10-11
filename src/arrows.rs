@@ -118,7 +118,6 @@ struct Hit {
     water: Option<IVec2>,
 }
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn arrows_update(
     mut commands: Commands,
     time: Res<Time>,
@@ -408,7 +407,7 @@ pub fn arrows_update(
             ArrowKind::Lift => {
                 if h.normal.y > 0.5 || h.normal.x != 0.0 {
                     let t = h.tile.unwrap();
-                    let (center, wall) = if h.normal.y > 0.5 {
+                    let center = if h.normal.y > 0.5 {
                         let mut c = Vec2::new(h.pos.x, (t.y + 1) as f32 * TILE - 6.0);
                         // keep the platform out of neighbouring walls
                         let probe = |c: Vec2| level.box_solid(c + Vec2::new(0.0, 22.0), Vec2::new(LIFT_WIDTH / 2.0, 14.0));
@@ -419,12 +418,12 @@ pub fn arrows_update(
                             let left = level.box_solid(c + Vec2::new(-LIFT_WIDTH / 2.0, 22.0), Vec2::new(1.0, 14.0));
                             c.x += if left { 4.0 } else { -4.0 };
                         }
-                        (c, 0.0)
+                        c
                     } else {
                         let face_x = if h.normal.x > 0.0 { (t.x + 1) as f32 * TILE } else { t.x as f32 * TILE };
-                        (Vec2::new(face_x + h.normal.x * (LIFT_WIDTH / 2.0 - 8.0), h.pos.y), h.normal.x)
+                        Vec2::new(face_x + h.normal.x * (LIFT_WIDTH / 2.0 - 8.0), h.pos.y)
                     };
-                    spawn_lift(&mut commands, &art, center, wall, &mut players);
+                    spawn_lift(&mut commands, &art, center, &mut players);
                     sfx.write(PlaySfx(Sfx::Lift, 0.7));
                     fx.write(Burst::trail_n(center, kind.color(), 14));
                 } else {
@@ -519,7 +518,6 @@ fn spawn_lift(
     commands: &mut Commands,
     art: &Art,
     center: Vec2,
-    wall: f32,
     players: &mut Query<(&mut Player, &mut Body, &mut Transform), (Without<Enemy>, Without<Arrow>)>,
 ) {
     let half = Vec2::new(LIFT_WIDTH / 2.0, 6.0);
@@ -527,7 +525,7 @@ fn spawn_lift(
         .spawn((
             LevelEntity,
             Platform { half, delta: Vec2::ZERO },
-            Lift { start: center, risen: 0.0, done: false, wall },
+            Lift { risen: 0.0, done: false },
             Sprite {
                 image: art.platforms[art::PLAT_LIFT].clone(),
                 custom_size: Some(Vec2::new(LIFT_WIDTH + 8.0, 16.0)),

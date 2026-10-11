@@ -16,7 +16,6 @@ pub struct CamState {
     pub initialized: bool,
 }
 
-#[allow(clippy::type_complexity)]
 pub fn camera_follow(
     time: Res<Time>,
     level: Option<Res<Level>>,

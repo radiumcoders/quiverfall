@@ -52,14 +52,12 @@ pub const PROP_ANCHOR: usize = 6;
 pub const PROP_SHRINE: usize = 7;
 pub const PLAT_LIFT: usize = 0;
 pub const PLAT_SLAB: usize = 1;
-pub const PLAT_ICE: usize = 2;
 pub const TILE_SPIKES: usize = 0;
 pub const TILE_THORNS: usize = 1;
 pub const TILE_GRATE: usize = 2;
 pub const TILE_CRUMBLE: usize = 3;
 pub const TILE_GATE: usize = 4;
 pub const TILE_PLANK: usize = 5;
-pub const TILE_ICE: usize = 6;
 pub const TILE_WATER: usize = 7;
 
 pub struct Palette {

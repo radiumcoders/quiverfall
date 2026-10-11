@@ -17,12 +17,11 @@ pub struct Banner {
     pub sub: String,
     pub t: f32,
     pub dur: f32,
-    pub unlock: Option<ArrowKind>,
 }
 
 impl Banner {
     pub fn new(title: &str, sub: &str) -> Self {
-        Self { title: title.into(), sub: sub.into(), t: 0.0, dur: 4.0, unlock: None }
+        Self { title: title.into(), sub: sub.into(), t: 0.0, dur: 4.0 }
     }
     pub fn unlock(&mut self, k: ArrowKind) {
         *self = Self {
@@ -30,7 +29,6 @@ impl Banner {
             sub: k.blurb().into(),
             t: 0.0,
             dur: 6.0,
-            unlock: Some(k),
         };
     }
 }
@@ -196,7 +194,6 @@ pub fn spawn_hud(mut commands: Commands, art: Res<Art>) {
 
 pub const CONTROLS: &str = "A/D move   Space jump   Shift dash   hold Mouse/J draw & release to fire   Right-click/F swipe (down+swipe in air = pogo)\n1-6 / Q E / wheel switch arrows   S+Space drop through ledges   Gamepad: A jump, RB dash, RT fire, Y swipe, LB switch";
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn update_hud(
     time: Res<Time>,
     art: Res<Art>,

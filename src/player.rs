@@ -42,7 +42,6 @@ pub struct Player {
     pub last_safe: Vec2,
     pub hazard_t: f32,
     pub dead_t: f32,
-    pub anim: f32,
     pub squash: f32,
     pub was_ground: bool,
     pub pegs: VecDeque<Entity>,
@@ -90,7 +89,6 @@ pub fn spawn_player(commands: &mut Commands, art: &Art, pos: Vec2) {
                 last_safe: pos,
                 hazard_t: 0.0,
                 dead_t: 0.0,
-                anim: 0.0,
                 squash: 0.0,
                 was_ground: false,
                 pegs: VecDeque::new(),
@@ -137,7 +135,6 @@ impl Player {
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn player_update(
     mut commands: Commands,
     time: Res<Time>,
@@ -435,7 +432,6 @@ pub fn player_update(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn player_visuals(
     time: Res<Time>,
     art: Res<Art>,
@@ -477,7 +473,7 @@ pub fn player_visuals(
                 let breathe = if frame == 0 { (time.elapsed_secs() * 2.5).sin() * 0.02 } else { 0.0 };
                 let sq = p.squash;
                 t.scale = Vec3::new(1.0 + sq * 0.5 - breathe, 1.0 - sq * 0.6 + breathe, 1.0);
-                let tilt = if frame >= 1 && frame <= 4 { -p.facing * 0.06 } else { 0.0 };
+                let tilt = if (1..=4).contains(&frame) { -p.facing * 0.06 } else { 0.0 };
                 t.rotation = Quat::from_rotation_z(tilt);
             }
             if let Ok((mut t, mut s)) = bows.get_mut(child) {

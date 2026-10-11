@@ -1,4 +1,6 @@
 //! QUIVERFALL — a Hollow-Knight-flavoured archer platformer.
+// Bevy systems routinely take many params and long query filters.
+#![allow(clippy::too_many_arguments, clippy::type_complexity)]
 
 mod arrows;
 mod art;

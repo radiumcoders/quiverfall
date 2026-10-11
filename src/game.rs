@@ -5,11 +5,11 @@ use std::collections::HashMap;
 
 use crate::art::{self, Art, palette};
 use crate::config::*;
-use crate::enemies::{Enemy, spawn_enemy};
+use crate::enemies::spawn_enemy;
 use crate::level::*;
-use crate::physics::{Body, Platform};
+use crate::physics::Platform;
 use crate::player::{Player, spawn_player};
-use crate::props::{Mover, Prop, spawn_prop};
+use crate::props::{Mover, spawn_prop};
 
 #[derive(States, Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum AppState {
@@ -76,7 +76,7 @@ pub struct GateVisual {
 pub struct BossDoorVisual;
 
 #[derive(Component)]
-pub struct WaterVisual(pub f32);
+pub struct WaterVisual;
 
 #[derive(Component)]
 pub struct CrumbleVisual(pub IVec2, pub Vec2);
@@ -87,11 +87,6 @@ pub enum LoadLevel {
     Start(usize),
     /// reload after death: respawn at the checkpoint
     Respawn,
-}
-
-#[derive(Resource)]
-pub struct Debug {
-    pub enabled: bool,
 }
 
 pub fn wait_for_assets(
@@ -130,7 +125,6 @@ pub fn wait_for_assets(
     }
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn load_level(
     mut commands: Commands,
     mut msgs: MessageReader<LoadLevel>,
@@ -401,7 +395,7 @@ pub fn spawn_tile_visual(commands: &mut Commands, level: &Level, p: IVec2, art: 
                 Transform::from_translation(c.extend(5.5)),
             );
             if let Some(e) = out.last() {
-                commands.entity(*e).insert(WaterVisual(p.x as f32 * 0.7));
+                commands.entity(*e).insert(WaterVisual);
             }
         }
         Tile::Thorns => spawn(
@@ -511,7 +505,6 @@ pub fn refresh_tiles(
 }
 
 /// Tile-level ticking: burning thorns, crumbling floors, gate animation.
-#[allow(clippy::type_complexity)]
 pub fn tick_tiles(
     time: Res<Time>,
     level: Option<ResMut<Level>>,
@@ -604,6 +597,3 @@ pub fn cleanup_level(mut commands: Commands, q: Query<Entity, With<LevelEntity>>
     commands.remove_resource::<Level>();
 }
 
-// keep a few imports referenced
-#[allow(dead_code)]
-fn _unused(_: Body, _: Enemy, _: Prop) {}

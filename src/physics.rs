@@ -41,13 +41,6 @@ pub struct PlatRef {
     pub half: Vec2,
     pub delta: Vec2,
 }
-
-pub fn collect_platforms(q: &Query<(Entity, &Transform, &Platform)>) -> Vec<PlatRef> {
-    q.iter()
-        .map(|(e, t, p)| PlatRef { e, center: t.translation.truncate(), half: p.half, delta: p.delta })
-        .collect()
-}
-
 pub fn move_body(pos: &mut Vec2, body: &mut Body, dt: f32, level: &Level, plats: &[PlatRef], self_e: Entity) {
     body.drop_through = (body.drop_through - dt).max(0.0);
     if body.no_collide {

@@ -28,10 +28,8 @@ pub enum Prop {
 
 #[derive(Component)]
 pub struct Lift {
-    pub start: Vec2,
     pub risen: f32,
     pub done: bool,
-    pub wall: f32,
 }
 
 #[derive(Component)]
@@ -163,7 +161,6 @@ pub fn platforms_update(
         l.risen += step;
         t.translation.y += step;
         p.delta = Vec2::new(0.0, step);
-        let _ = l.start;
     }
     for (mut m, mut p, mut t) in &mut movers {
         let len = m.offset.length().max(1.0);
@@ -180,7 +177,6 @@ pub fn platforms_update(
     }
 }
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn props_update(
     time: Res<Time>,
     art: Res<Art>,

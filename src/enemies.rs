@@ -133,7 +133,6 @@ pub fn spawn_enemy(commands: &mut Commands, art: &Art, kind: EnemyKind, floor: V
         });
 }
 
-#[allow(clippy::too_many_arguments, clippy::type_complexity)]
 pub fn enemies_update(
     mut commands: Commands,
     time: Res<Time>,
@@ -537,7 +536,6 @@ pub fn enemies_update(
 }
 
 /// Melee swipes and the down-slash pogo.
-#[allow(clippy::type_complexity)]
 pub fn melee(
     level: Option<Res<Level>>,
     mut players: Query<(&mut Player, &mut Body, &Transform), Without<Enemy>>,
@@ -600,7 +598,6 @@ pub fn melee(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn projectiles(
     mut commands: Commands,
     time: Res<Time>,
@@ -660,7 +657,6 @@ pub fn projectiles(
     }
 }
 
-#[allow(clippy::type_complexity)]
 pub fn enemy_visuals(
     time: Res<Time>,
     art: Res<Art>,
